@@ -23,7 +23,9 @@
     "noFallthroughCasesInSwitch": true,
     "paths": {
       "@app/prisma": ["libs/prisma/src"],
-      "@app/prisma/*": ["libs/prisma/src/*"]
+      "@app/prisma/*": ["libs/prisma/src/*"],
+      "@app/shared": ["libs/shared/src"],
+      "@app/shared/*": ["libs/shared/src/*"]
     }
   }
 }
