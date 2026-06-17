@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '@app/prisma';
@@ -49,5 +49,21 @@ export class AppService {
       });
       throw new InternalServerErrorException('Failed to enqueue job');
     }
+  }
+
+  async getJobById(jobId: string) {
+    const job = await this.prisma.job.findUnique({ where: { id: jobId } });
+
+    if (!job) {
+      throw new NotFoundException(`Job with ID ${jobId} not found`);
+    }
+
+    return job;
+  }
+
+  async getAllJobs() {
+    return this.prisma.job.findMany({
+      orderBy: { created_at: 'desc' },
+    });
   }
 }
