@@ -4,6 +4,7 @@ import { WorkerService } from './worker.service';
 import { BullModule } from '@nestjs/bullmq';
 import { PrismaModule } from '@app/prisma';
 import { ImageProcessor } from './image.processor';
+import { CsvProcessor } from './csv.processor';
 
 @Module({
   imports: [
@@ -16,6 +17,6 @@ import { ImageProcessor } from './image.processor';
     }),
   ],
   controllers: [WorkerController],
-  providers: [WorkerService, ImageProcessor],
+  providers: [WorkerService, ImageProcessor, CsvProcessor],
 })
 export class WorkerModule {}
