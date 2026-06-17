@@ -1,0 +1,53 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Job {
+  id           String    @id @default(uuid())
+  name         String
+  queue_name   String
+  status       String    @default("queued") // queued, active, completed, failed, delayed, waiting-children
+  priority     Int       @default(0)
+  attempts     Int       @default(0)
+  max_attempts Int       @default(3)
+  payload      Json
+  result       Json?
+  error        String?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+  completed_at DateTime?
+  
+  logs         JobLog[]
+
+  @@map("jobs")
+}
+
+model Worker {
+  id             String   @id @default(uuid())
+  hostname       String
+  status         String   @default("active") // active, paused, offline
+  last_heartbeat DateTime @default(now())
+  current_jobs   Int      @default(0)
+  created_at     DateTime @default(now())
+
+  @@map("workers")
+}
+
+model JobLog {
+  id         String   @id @default(uuid())
+  job_id     String
+  event_type String   // started, completed, failed, retried
+  message    String?
+  created_at DateTime @default(now())
+
+  job        Job      @relation(fields: [job_id], references: [id], onDelete: Cascade)
+
+  @@map("job_logs")
+}
