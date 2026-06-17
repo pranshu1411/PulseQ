@@ -21,6 +21,11 @@ export class AppController {
     return this.appService.getJobById(jobId);
   }
 
+  @Post(':id/retry')
+  async retryJob(@Param('id') jobId: string) {
+    return this.appService.retryJob(jobId);
+  }
+
   @Get()
   async getAllJobs() {
     return this.appService.getAllJobs();

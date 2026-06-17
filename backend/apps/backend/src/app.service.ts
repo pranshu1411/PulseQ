@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '@app/prisma';
@@ -100,6 +100,53 @@ export class AppService {
     }
 
     return job;
+  }
+
+  async retryJob(jobId: string) {
+    const dbJob = await this.prisma.job.findUnique({ where: { id: jobId } });
+
+    if (!dbJob) {
+      throw new NotFoundException(`Job with ID ${jobId} not found`);
+    }
+
+    if (dbJob.status !== 'failed') {
+      throw new BadRequestException(`Only failed jobs can be retried. Current status is ${dbJob.status}`);
+    }
+
+    // 1. Determine which queue this job belongs to
+    const queue = dbJob.queue_name === IMAGE_NAME ? this.imageQueue : this.csvQueue;
+
+    // 2. Fetch the job from Redis
+    const bullJob = await queue.getJob(jobId);
+
+    if (!bullJob) {
+      throw new NotFoundException(`BullMQ Job ${jobId} not found in Redis. It may have been purged.`);
+    }
+
+    // 3. Trigger BullMQ retry
+    // This moves the job from the 'failed' set back to the 'wait' set
+    await bullJob.retry();
+
+    // 4. Update the DB to reflect the manual intervention
+    await this.prisma.$transaction([
+      this.prisma.job.update({
+        where: { id: jobId },
+        data: {
+          status: 'queued',
+          error: null, // Clear the previous error
+          updated_at: new Date(), // We update this manually here since it's a specific user action
+        },
+      }),
+      this.prisma.jobLog.create({
+        data: {
+          job_id: jobId,
+          event_type: 'retried',
+          message: 'Job was manually retried via API',
+        },
+      }),
+    ]);
+
+    return { message: `Job ${jobId} has been requeued for processing.` };
   }
 
   async getAllJobs() {
