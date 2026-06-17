@@ -16,7 +16,7 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
     // Register the worker in the database
     const worker = await this.prisma.worker.create({
       data: {
-        hostname: os.hostname(),
+        hostname: `${os.hostname()}-${process.pid}`,
         status: 'active',
       },
     });
