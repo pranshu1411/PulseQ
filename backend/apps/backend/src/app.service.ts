@@ -9,11 +9,7 @@ export class AppService {
   constructor(
     @InjectQueue(QUEUE_NAME) private readonly imageQueue: Queue,
     private readonly prisma: PrismaService,
-  ) {}
-
-  getHello(): string {
-    return 'Hello World!';
-  }
+  ) { }
 
   async createJob(payload: JobPayload) {
     // 1. Create a job record in Postgres via Prisma

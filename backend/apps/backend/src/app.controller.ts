@@ -4,12 +4,7 @@ import { type JobPayload } from '@app/shared';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
-
-  @Get()
-  getHello(): string {
-    return this.appService.getHello();
-  }
+  constructor(private readonly appService: AppService) { }
 
   @Post('jobs')
   async createJob(@Body() payload: JobPayload) {
