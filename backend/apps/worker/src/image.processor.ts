@@ -1,10 +1,10 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { QUEUE_NAME, JobPayload } from '@app/shared';
+import { IMAGE_NAME, ImageProcessingPayload } from '@app/shared';
 import { PrismaService } from '@app/prisma';
 
-@Processor(QUEUE_NAME)
+@Processor(IMAGE_NAME)
 export class ImageProcessor extends WorkerHost {
   private readonly logger = new Logger(ImageProcessor.name);
 
@@ -12,7 +12,7 @@ export class ImageProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<JobPayload, any, string>): Promise<any> {
+  async process(job: Job<ImageProcessingPayload, any, string>): Promise<any> {
     this.logger.log(`Processing job ${job.id} of type ${job.name}`);
 
     // 1. Mark job as active in DB

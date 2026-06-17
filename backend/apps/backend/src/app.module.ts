@@ -3,7 +3,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { BullModule } from '@nestjs/bullmq';
 import { PrismaModule } from '@app/prisma';
-import { QUEUE_NAME } from '@app/shared';
+import { IMAGE_NAME, CSV_NAME } from '@app/shared';
 
 @Module({
   imports: [
@@ -15,10 +15,12 @@ import { QUEUE_NAME } from '@app/shared';
       },
     }),
     BullModule.registerQueue({
-      name: QUEUE_NAME,
+      name: IMAGE_NAME,
+    }, {
+      name: CSV_NAME
     }),
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
