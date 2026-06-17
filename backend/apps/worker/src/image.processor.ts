@@ -1,4 +1,4 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { IMAGE_NAME, ImageProcessingPayload } from '@app/shared';
@@ -13,46 +13,96 @@ export class ImageProcessor extends WorkerHost {
   }
 
   async process(job: Job<ImageProcessingPayload, any, string>): Promise<any> {
+    if (!job.id) {
+      throw new Error('Job ID is missing');
+    }
+    
     this.logger.log(`Processing job ${job.id} of type ${job.name}`);
 
-    // 1. Mark job as active in DB
-    await this.prisma.job.update({
-      where: { id: job.id },
-      data: { status: 'active', updated_at: new Date() },
+    // 1. Simulate processing logic
+    const { imageUrl } = job.data;
+    this.logger.log(`Verifying image URL: ${imageUrl}`);
+
+    const response = await fetch(imageUrl, {
+      method: 'HEAD',
     });
 
-    try {
-      // 2. Simulate processing logic
-      this.logger.log(`Payload received: ${JSON.stringify(job.data)}`);
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.status}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      const result = { success: true, processedUrl: 'https://example.com/processed.jpg' };
+    const result = { success: true, processedUrl: 'https://example.com/processed.jpg' };
+    return result;
+  }
 
-      // 3. Mark job as completed
-      await this.prisma.job.update({
+  @OnWorkerEvent('active')
+  async onActive(job: Job) {
+    if (!job.id) return;
+    this.logger.log(`Job ${job.id} is active`);
+    
+    await this.prisma.$transaction([
+      this.prisma.job.update({
+        where: { id: job.id },
+        data: { status: 'active', attempts: job.attemptsMade },
+      }),
+      this.prisma.jobLog.create({
+        data: {
+          job_id: job.id,
+          event_type: job.attemptsMade > 1 ? 'retried' : 'started',
+          message: `Job started on attempt ${job.attemptsMade}`,
+        },
+      }),
+    ]);
+  }
+
+  @OnWorkerEvent('completed')
+  async onCompleted(job: Job, result: any) {
+    if (!job.id) return;
+    this.logger.log(`Job ${job.id} completed successfully`);
+    
+    await this.prisma.$transaction([
+      this.prisma.job.update({
         where: { id: job.id },
         data: {
           status: 'completed',
           result: result as any,
-          completed_at: new Date()
+          completed_at: new Date(),
         },
-      });
+      }),
+      this.prisma.jobLog.create({
+        data: {
+          job_id: job.id,
+          event_type: 'completed',
+          message: 'Job completed successfully',
+        },
+      }),
+    ]);
+  }
 
-      this.logger.log(`Job ${job.id} completed successfully`);
-      return result;
-    } catch (error) {
-      this.logger.error(`Job ${job.id} failed: ${error}`);
-
-      // Mark job as failed (if it runs out of attempts, BullMQ marks it failed permanently)
-      await this.prisma.job.update({
+  @OnWorkerEvent('failed')
+  async onFailed(job: Job | undefined, error: Error) {
+    if (!job || !job.id) return;
+    this.logger.error(`Job ${job.id} failed: ${error.message}`);
+    
+    const isPermanent = job.attemptsMade >= (job.opts.attempts || 1);
+    
+    await this.prisma.$transaction([
+      this.prisma.job.update({
         where: { id: job.id },
         data: {
-          status: 'failed',
-          error: error instanceof Error ? error.message : 'Unknown error',
-          updated_at: new Date()
+          status: isPermanent ? 'failed' : 'delayed',
+          error: error.message,
+          attempts: job.attemptsMade,
         },
-      });
-      throw error;
-    }
+      }),
+      this.prisma.jobLog.create({
+        data: {
+          job_id: job.id,
+          event_type: 'failed',
+          message: error.message,
+        },
+      }),
+    ]);
   }
 }
