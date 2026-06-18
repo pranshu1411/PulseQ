@@ -5,6 +5,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { PrismaModule } from '@app/prisma';
 import { ImageProcessor } from './image.processor';
 import { CsvProcessor } from './csv.processor';
+import { IMAGE_NAME, CSV_NAME } from '@app/shared';
 
 @Module({
   imports: [
@@ -15,6 +16,10 @@ import { CsvProcessor } from './csv.processor';
         port: 6379,
       },
     }),
+    BullModule.registerQueue(
+      { name: IMAGE_NAME },
+      { name: CSV_NAME }
+    ),
   ],
   controllers: [WorkerController],
   providers: [WorkerService, ImageProcessor, CsvProcessor],
