@@ -51,3 +51,16 @@ model JobLog {
 
   @@map("job_logs")
 }
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  category    String
+  price       Float
+  stock       Int
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("products")
+}
