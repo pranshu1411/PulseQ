@@ -7,6 +7,6 @@ export class WorkerController {
 
   @Get()
   getHello(): string {
-    return this.workerService.getHello();
+    return 'Worker Service is running';
   }
 }

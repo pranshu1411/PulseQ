@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
+import * as requestModule from 'supertest';
+const request = requestModule as any;
 import { WorkerModule } from './../src/worker.module';
 
 describe('WorkerController (e2e)', () => {
@@ -19,6 +20,6 @@ describe('WorkerController (e2e)', () => {
     return request(app.getHttpServer())
       .get('/')
       .expect(200)
-      .expect('Hello World!');
+      .expect('Worker Service is running');
   });
 });
