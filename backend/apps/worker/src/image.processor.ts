@@ -4,6 +4,10 @@ import { Job } from 'bullmq';
 import { IMAGE_NAME, ImageProcessingPayload } from '@app/shared';
 import { PrismaService } from '@app/prisma';
 
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import sharp from 'sharp';
+
 @Processor(IMAGE_NAME)
 export class ImageProcessor extends WorkerHost {
   private readonly logger = new Logger(ImageProcessor.name);
@@ -16,23 +20,47 @@ export class ImageProcessor extends WorkerHost {
     if (!job.id) {
       throw new Error('Job ID is missing');
     }
-    
+
     this.logger.log(`Processing job ${job.id} of type ${job.name}`);
 
-    // 1. Simulate processing logic
     const { imageUrl } = job.data;
-    this.logger.log(`Verifying image URL: ${imageUrl}`);
+    this.logger.log(`Downloading image from: ${imageUrl}`);
 
-    const response = await fetch(imageUrl, {
-      method: 'HEAD',
-    });
-
+    const response = await fetch(imageUrl);
     if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.status}`);
+      throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
     }
-    await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    const result = { success: true, processedUrl: 'https://example.com/processed.jpg' };
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    const thumbnailsDir = path.join(uploadsDir, 'thumbnails');
+    const compressedDir = path.join(uploadsDir, 'compressed');
+
+    await fs.mkdir(thumbnailsDir, { recursive: true });
+    await fs.mkdir(compressedDir, { recursive: true });
+
+    const filename = `${job.id}.jpg`;
+    const thumbnailPath = path.join(thumbnailsDir, filename);
+    const compressedPath = path.join(compressedDir, filename);
+
+    const image = sharp(buffer);
+    const metadata = await image.metadata();
+
+    await Promise.all([
+      image.clone().resize(150, 150, { fit: 'cover' }).toFile(thumbnailPath),
+      image.clone().resize({ width: 800, withoutEnlargement: true }).toFile(compressedPath)
+    ]);
+
+    const result = {
+      width: metadata.width,
+      height: metadata.height,
+      format: metadata.format,
+      thumbnailPath: `uploads/thumbnails/${filename}`,
+      compressedPath: `uploads/compressed/${filename}`
+    };
+
     return result;
   }
 
