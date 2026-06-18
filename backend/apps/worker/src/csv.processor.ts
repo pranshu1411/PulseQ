@@ -1,21 +1,22 @@
-import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
+import { Processor } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { CSV_NAME, CsvImportPayload } from '@app/shared';
 import { PrismaService } from '@app/prisma';
+import { BaseProcessor } from './base.processor';
 import * as fs from 'fs';
 import * as fsp from 'fs/promises';
 import * as path from 'path';
-import { Readable } from 'stream';
+import { Readable, Transform } from 'stream';
 import { pipeline } from 'stream/promises';
 import csvParser from 'csv-parser';
 
 @Processor(CSV_NAME)
-export class CsvProcessor extends WorkerHost {
-  private readonly logger = new Logger(CsvProcessor.name);
+export class CsvProcessor extends BaseProcessor {
+  protected readonly logger = new Logger(CsvProcessor.name);
 
-  constructor(private readonly prisma: PrismaService) {
-    super();
+  constructor(protected readonly prisma: PrismaService) {
+    super(prisma);
   }
 
   async process(job: Job<CsvImportPayload, any, string>): Promise<any> {
@@ -40,24 +41,20 @@ export class CsvProcessor extends WorkerHost {
       throw new Error('Response body is empty');
     }
 
+    let totalExpectedRows = 0;
+    const lineCounter = new Transform({
+      transform(chunk, encoding, callback) {
+        for (let i = 0; i < chunk.length; ++i) {
+          if (chunk[i] === 10) totalExpectedRows++; // '\n'
+        }
+        callback(null, chunk);
+      }
+    });
+
     const fileStream = fs.createWriteStream(tempFilePath);
 
-    // Save remote stream to local file. 
-    // We cast to `any` because TS often conflicts between DOM ReadableStream and Node's stream/web ReadableStream typings.
-    await pipeline(Readable.fromWeb(response.body as any), fileStream);
-
-    // 1. Quick pass to count total lines for accurate progress tracking
-    let totalExpectedRows = 0;
-    await new Promise((resolve, reject) => {
-      fs.createReadStream(tempFilePath)
-        .on('data', (chunk) => {
-          for (let i = 0; i < chunk.length; ++i) {
-            if (chunk[i] === 10) totalExpectedRows++; // '\n'
-          }
-        })
-        .on('end', () => resolve(undefined))
-        .on('error', reject);
-    });
+    // Save remote stream to local file and count lines simultaneously
+    await pipeline(Readable.fromWeb(response.body as any), lineCounter, fileStream);
 
     // Account for CSV header row
     totalExpectedRows = Math.max(0, totalExpectedRows - 1);
@@ -139,75 +136,5 @@ export class CsvProcessor extends WorkerHost {
       // Ensure we aggressively clean up the temp file
       fsp.unlink(tempFilePath).catch(e => this.logger.error(`Failed to clean up temp file: ${e.message}`));
     }
-  }
-
-  @OnWorkerEvent('active')
-  async onActive(job: Job) {
-    if (!job.id) return;
-    this.logger.log(`Job ${job.id} is active`);
-
-    await this.prisma.$transaction([
-      this.prisma.job.update({
-        where: { id: job.id },
-        data: { status: 'active', attempts: job.attemptsMade },
-      }),
-      this.prisma.jobLog.create({
-        data: {
-          job_id: job.id,
-          event_type: job.attemptsMade > 1 ? 'retried' : 'started',
-          message: `Job started on attempt ${job.attemptsMade}`,
-        },
-      }),
-    ]);
-  }
-
-  @OnWorkerEvent('completed')
-  async onCompleted(job: Job, result: any) {
-    if (!job.id) return;
-    this.logger.log(`Job ${job.id} completed successfully`);
-
-    await this.prisma.$transaction([
-      this.prisma.job.update({
-        where: { id: job.id },
-        data: {
-          status: 'completed',
-          result: result as any,
-          completed_at: new Date(),
-        },
-      }),
-      this.prisma.jobLog.create({
-        data: {
-          job_id: job.id,
-          event_type: 'completed',
-          message: 'Job completed successfully',
-        },
-      }),
-    ]);
-  }
-
-  @OnWorkerEvent('failed')
-  async onFailed(job: Job | undefined, error: Error) {
-    if (!job || !job.id) return;
-    this.logger.error(`Job ${job.id} failed: ${error.message}`);
-
-    const isPermanent = job.attemptsMade >= (job.opts.attempts || 1);
-
-    await this.prisma.$transaction([
-      this.prisma.job.update({
-        where: { id: job.id },
-        data: {
-          status: isPermanent ? 'failed' : 'delayed',
-          error: error.message,
-          attempts: job.attemptsMade,
-        },
-      }),
-      this.prisma.jobLog.create({
-        data: {
-          job_id: job.id,
-          event_type: 'failed',
-          message: error.message,
-        },
-      }),
-    ]);
   }
 }
