@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { AppService } from './app.service';
-import { type ImageProcessingPayload, type CsvImportPayload } from '@app/shared';
+import { ImageProcessingPayload, CsvImportPayload } from '@app/shared';
 
 @Controller('jobs')
 export class AppController {
