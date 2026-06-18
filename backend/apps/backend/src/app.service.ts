@@ -33,6 +33,8 @@ export class AppService {
           type: 'exponential',
           delay: 2000,
         },
+        removeOnComplete: true,
+        removeOnFail: true,
       });
 
       return {
@@ -73,6 +75,8 @@ export class AppService {
           type: 'exponential',
           delay: 2000,
         },
+        removeOnComplete: true,
+        removeOnFail: true,
       });
 
       return {
