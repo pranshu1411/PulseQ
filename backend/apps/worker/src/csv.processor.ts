@@ -26,7 +26,7 @@ export class CsvProcessor extends WorkerHost {
     const { fileUrl, batchSize = 100 } = job.data;
     this.logger.log(`Downloading CSV from: ${fileUrl} (batch size: ${batchSize})`);
 
-    const originalsDir = path.join(process.cwd(), 'uploads', 'originals');
+    const originalsDir = path.join(process.cwd(), 'apps', 'worker', 'uploads', 'originals');
     await fsp.mkdir(originalsDir, { recursive: true });
 
     const tempFilePath = path.join(originalsDir, `${job.id}.csv`);

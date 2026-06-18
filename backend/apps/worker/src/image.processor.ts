@@ -34,7 +34,7 @@ export class ImageProcessor extends WorkerHost {
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const uploadsDir = path.join(process.cwd(), 'uploads');
+    const uploadsDir = path.join(process.cwd(), 'apps', 'worker', 'uploads');
     const thumbnailsDir = path.join(uploadsDir, 'thumbnails');
     const compressedDir = path.join(uploadsDir, 'compressed');
 
@@ -48,17 +48,15 @@ export class ImageProcessor extends WorkerHost {
     const image = sharp(buffer);
     const metadata = await image.metadata();
 
-    await Promise.all([
-      image.clone().resize(150, 150, { fit: 'cover' }).toFile(thumbnailPath),
-      image.clone().resize({ width: 800, withoutEnlargement: true }).toFile(compressedPath)
-    ]);
+    await image.clone().resize(150, 150, { fit: 'cover' }).toFile(thumbnailPath);
+    await image.clone().resize({ width: 800, withoutEnlargement: true }).toFile(compressedPath);
 
     const result = {
       width: metadata.width,
       height: metadata.height,
       format: metadata.format,
-      thumbnailPath: `uploads/thumbnails/${filename}`,
-      compressedPath: `uploads/compressed/${filename}`
+      thumbnailPath: `apps/worker/uploads/thumbnails/${filename}`,
+      compressedPath: `apps/worker/uploads/compressed/${filename}`
     };
 
     return result;
