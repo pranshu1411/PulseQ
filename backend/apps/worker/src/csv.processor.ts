@@ -59,6 +59,9 @@ export class CsvProcessor extends WorkerHost {
         .on('error', reject);
     });
 
+    // Account for CSV header row
+    totalExpectedRows = Math.max(0, totalExpectedRows - 1);
+
     // 2. Parse CSV
     let processedRows = 0;
     let importedRows = 0;
@@ -80,49 +83,62 @@ export class CsvProcessor extends WorkerHost {
       batch = [];
     };
 
-    return new Promise((resolve, reject) => {
-      const parser = fs.createReadStream(tempFilePath).pipe(csvParser());
+    try {
+      return await new Promise((resolve, reject) => {
+        const parser = fs.createReadStream(tempFilePath).pipe(csvParser());
+        
+        parser.on('data', async (row) => {
+            try {
+              processedRows++;
 
-      parser.on('data', async (row) => {
-        processedRows++;
+              // Basic validation
+              const name = row.name?.trim();
+              const category = row.category?.trim();
+              const price = parseFloat(row.price);
+              const stock = parseInt(row.stock, 10);
+              const description = row.description?.trim();
 
-        // Basic validation
-        const name = row.name?.trim();
-        const category = row.category?.trim();
-        const price = parseFloat(row.price);
-        const stock = parseInt(row.stock, 10);
-        const description = row.description?.trim();
+              if (!name || !category || isNaN(price) || isNaN(stock)) {
+                failedRows++;
+                errors.push(`Row ${processedRows}: Validation failed. Name, category, valid price, and stock are required.`);
+                return;
+              }
 
-        if (!name || !category || isNaN(price) || isNaN(stock)) {
-          failedRows++;
-          errors.push(`Row ${processedRows}: Validation failed. Name, category, valid price, and stock are required.`);
-          return;
-        }
+              batch.push({ name, category, price, stock, description });
 
-        batch.push({ name, category, price, stock, description });
-
-        if (batch.length >= batchSize) {
-          parser.pause();
-          await flushBatch();
-          const progress = totalExpectedRows > 0 ? Math.floor((processedRows / totalExpectedRows) * 100) : 0;
-          await job.updateProgress(progress);
-          parser.resume();
-        }
-      })
-        .on('end', async () => {
-          await flushBatch();
-
-          resolve({
-            totalRows: processedRows,
-            importedRows,
-            failedRows,
-            errors,
+              if (batch.length >= batchSize) {
+                parser.pause();
+                await flushBatch();
+                const progress = totalExpectedRows > 0 ? Math.floor((processedRows / totalExpectedRows) * 100) : 0;
+                await job.updateProgress(progress);
+                parser.resume();
+              }
+            } catch (err) {
+              parser.emit('error', err);
+            }
+          })
+          .on('end', async () => {
+            try {
+              await flushBatch();
+              
+              resolve({
+                totalRows: processedRows,
+                importedRows,
+                failedRows,
+                errors,
+              });
+            } catch (err) {
+              reject(err);
+            }
+          })
+          .on('error', (err) => {
+            reject(err);
           });
-        })
-        .on('error', (err) => {
-          reject(err);
-        });
-    });
+      });
+    } finally {
+      // Ensure we aggressively clean up the temp file
+      fsp.unlink(tempFilePath).catch(e => this.logger.error(`Failed to clean up temp file: ${e.message}`));
+    }
   }
 
   @OnWorkerEvent('active')
