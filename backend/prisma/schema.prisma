@@ -10,6 +10,28 @@ datasource db {
   provider = "postgresql"
 }
 
+enum AuthProvider {
+  GOOGLE
+  GITHUB
+  MICROSOFT
+}
+
+model User {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  name       String?
+  avatarUrl  String?
+  provider   AuthProvider
+  providerId String   @unique
+
+  jobs       Job[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("users")
+}
+
 model Job {
   id           String    @id @default(uuid())
   name         String
@@ -21,6 +43,10 @@ model Job {
   payload      Json
   result       Json?
   error        String?
+  
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   created_at   DateTime  @default(now())
   updated_at   DateTime  @updatedAt
   completed_at DateTime?
