@@ -7,6 +7,7 @@ import DashboardLayout from './layouts/DashboardLayout';
 import Dashboard from './pages/Dashboard';
 import SubmitImageJob from './pages/SubmitImageJob';
 import SubmitCsvJob from './pages/SubmitCsvJob';
+import CsvRecords from './pages/CsvRecords';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -46,6 +47,7 @@ export default function App() {
             <Route index element={<Dashboard />} />
             <Route path="submit-image" element={<SubmitImageJob />} />
             <Route path="submit-csv" element={<SubmitCsvJob />} />
+            <Route path="csv-records" element={<CsvRecords />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

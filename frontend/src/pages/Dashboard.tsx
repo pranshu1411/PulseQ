@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { Activity, CheckCircle2, Clock, XCircle, Download } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import type { JobEvent } from '../layouts/DashboardLayout';
 
@@ -64,6 +64,26 @@ export default function Dashboard() {
                       <span className="text-red-400 font-medium truncate max-w-xs">{ev.failedReason}</span>
                     )}
                   </div>
+                  {ev.queueName === 'image-processing' && ev.type === 'completed' && (
+                    <div className="mt-3 flex items-center gap-3">
+                      <a 
+                        href={`http://localhost:4000/jobs/${ev.jobId}/download/thumbnail`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-md transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5 mr-1.5" /> Thumbnail
+                      </a>
+                      <a 
+                        href={`http://localhost:4000/jobs/${ev.jobId}/download/compressed`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-md transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5 mr-1.5" /> Compressed
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
             ))
