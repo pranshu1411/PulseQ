@@ -12,7 +12,7 @@ export class AppService {
     private readonly prisma: PrismaService,
   ) { }
 
-  async createImageJob(payload: ImageProcessingPayload) {
+  async createImageJob(payload: ImageProcessingPayload, userId: string) {
     // 1. Create a job record in Postgres via Prisma
     const dbJob = await this.prisma.job.create({
       data: {
@@ -20,6 +20,7 @@ export class AppService {
         queue_name: IMAGE_NAME,
         status: 'queued',
         payload: payload as any,
+        userId,
       },
     });
 
@@ -54,7 +55,7 @@ export class AppService {
     }
   }
 
-  async createCsvJob(payload: CsvImportPayload) {
+  async createCsvJob(payload: CsvImportPayload, userId: string) {
     // 1. Create a job record in Postgres via Prisma
     const dbJob = await this.prisma.job.create({
       data: {
@@ -62,6 +63,7 @@ export class AppService {
         queue_name: CSV_NAME,
         status: 'queued',
         payload: payload as any,
+        userId,
       },
     });
 
@@ -96,20 +98,20 @@ export class AppService {
     }
   }
 
-  async getJobById(jobId: string) {
+  async getJobById(jobId: string, userId: string) {
     const job = await this.prisma.job.findUnique({ where: { id: jobId } });
 
-    if (!job) {
+    if (!job || job.userId !== userId) {
       throw new NotFoundException(`Job with ID ${jobId} not found`);
     }
 
     return job;
   }
 
-  async retryJob(jobId: string) {
+  async retryJob(jobId: string, userId: string) {
     const dbJob = await this.prisma.job.findUnique({ where: { id: jobId } });
 
-    if (!dbJob) {
+    if (!dbJob || dbJob.userId !== userId) {
       throw new NotFoundException(`Job with ID ${jobId} not found`);
     }
 
@@ -153,8 +155,9 @@ export class AppService {
     return { message: `Job ${jobId} has been requeued for processing.` };
   }
 
-  async getAllJobs() {
+  async getAllJobs(userId: string) {
     return this.prisma.job.findMany({
+      where: { userId },
       orderBy: { created_at: 'desc' },
     });
   }
