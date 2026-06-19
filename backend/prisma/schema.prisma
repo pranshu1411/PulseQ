@@ -91,3 +91,16 @@ model Product {
 
   @@map("products")
 }
+
+model ImageRecord {
+  id             String   @id @default(uuid())
+  originalUrl    String
+  thumbnailPath  String
+  compressedPath String
+  format         String?
+  width          Int?
+  height         Int?
+  createdAt      DateTime @default(now())
+
+  @@map("image_records")
+}
