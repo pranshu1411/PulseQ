@@ -70,6 +70,7 @@ export default function DashboardLayout() {
 
     const newSocket = io('http://localhost:4000', {
       transports: ['websocket'],
+      withCredentials: true,
     });
 
     newSocket.on('connect', () => setIsConnected(true));
@@ -78,6 +79,12 @@ export default function DashboardLayout() {
     const handleEvent = (type: JobEvent['type']) => (data: Record<string, unknown>) => {
       setEvents((prev) => [{ ...data, type, timestamp: Date.now() } as JobEvent, ...prev].slice(0, 100));
       
+      if (type === 'completed') {
+        toast.success(`Job ${data.jobId} completed successfully`);
+      } else if (type === 'failed') {
+        toast.error(`Job ${data.jobId} failed`);
+      }
+
       setStats((prev) => {
         const next = { ...prev };
         if (type === 'active') {

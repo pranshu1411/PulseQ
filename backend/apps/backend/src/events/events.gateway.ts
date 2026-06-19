@@ -52,7 +52,10 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
         select: { userId: true },
       });
       if (job) {
+        this.logger.log(`Emitting ${eventName} to user:${job.userId} for job ${jobId}`);
         this.server.to(`user:${job.userId}`).emit(eventName, data);
+      } else {
+        this.logger.warn(`Job ${jobId} not found in DB, cannot emit ${eventName}`);
       }
     } catch (e) {
       this.logger.error(`Error emitting to user for job ${jobId}:`, e.message);
