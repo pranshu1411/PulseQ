@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { Activity, Menu, LayoutDashboard, Image as ImageIcon, FileText, LogOut, Database, History } from 'lucide-react';
+import { Activity, Menu, LayoutDashboard, Image as ImageIcon, FileText, LogOut, Database, History, ChevronDown, PlusCircle } from 'lucide-react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -28,6 +28,7 @@ export default function DashboardLayout() {
   const [events, setEvents] = useState<JobEvent[]>([]);
   const [stats, setStats] = useState({ active: 0, completed: 0, failed: 0, waiting: 0 });
   const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const [isAssignJobsOpen, setIsAssignJobsOpen] = useState(false);
   
   const { user, checkAuth } = useAuth();
   const navigate = useNavigate();
@@ -154,24 +155,39 @@ export default function DashboardLayout() {
             >
               <History className="mr-3 w-5 h-5" /> Job History
             </NavLink>
-            <NavLink 
-              to="/submit-image" 
-              className={({ isActive }) => cn(
-                "w-full flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group", 
-                isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
-              )}
-            >
-              <ImageIcon className="mr-3 w-5 h-5" /> Image Job
-            </NavLink>
-            <NavLink 
-              to="/submit-csv" 
-              className={({ isActive }) => cn(
-                "w-full flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group", 
-                isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
-              )}
-            >
-              <FileText className="mr-3 w-5 h-5" /> CSV Job
-            </NavLink>
+            <div>
+              <button
+                onClick={() => setIsAssignJobsOpen(!isAssignJobsOpen)}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
+              >
+                <div className="flex items-center">
+                  <PlusCircle className="mr-3 w-5 h-5" /> Assign Jobs
+                </div>
+                <ChevronDown className={cn("w-4 h-4 transition-transform duration-200", isAssignJobsOpen ? "rotate-180" : "")} />
+              </button>
+              
+              <div className={cn("overflow-hidden transition-all duration-200", isAssignJobsOpen ? "max-h-40 opacity-100 mt-1" : "max-h-0 opacity-0")}>
+                <NavLink 
+                  to="/submit-image" 
+                  className={({ isActive }) => cn(
+                    "w-full flex items-center pl-11 pr-3 py-2 rounded-lg transition-all duration-200 group text-sm", 
+                    isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
+                  )}
+                >
+                  <ImageIcon className="mr-2 w-4 h-4" /> Image Job
+                </NavLink>
+                <NavLink 
+                  to="/submit-csv" 
+                  className={({ isActive }) => cn(
+                    "w-full flex items-center pl-11 pr-3 py-2 rounded-lg transition-all duration-200 group text-sm mt-1", 
+                    isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
+                  )}
+                >
+                  <FileText className="mr-2 w-4 h-4" /> CSV Job
+                </NavLink>
+              </div>
+            </div>
+            
             <NavLink 
               to="/csv-records" 
               className={({ isActive }) => cn(
