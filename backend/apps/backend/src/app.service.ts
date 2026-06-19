@@ -202,17 +202,18 @@ export class AppService {
     res.download(absolutePath);
   }
 
-  async getProducts(page: number, limit: number, search?: string) {
+  async getProducts(page: number, limit: number, search?: string, userId?: string) {
     const skip = (page - 1) * limit;
     
-    const whereClause = search
-      ? {
-          OR: [
+    const whereClause: any = { userId };
+    
+    if (search) {
+      whereClause.OR = [
             { name: { contains: search, mode: 'insensitive' as const } },
             { category: { contains: search, mode: 'insensitive' as const } },
           ],
-        }
-      : {};
+        };
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.product.findMany({
@@ -237,16 +238,17 @@ export class AppService {
     };
   }
 
-  async getImages(page: number, limit: number) {
+  async getImages(page: number, limit: number, userId?: string) {
     const skip = (page - 1) * limit; // hot reload trigger
 
     const [data, total] = await Promise.all([
       this.prisma.imageRecord.findMany({
+        where: { userId },
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.imageRecord.count(),
+      this.prisma.imageRecord.count({ where: { userId } }),
     ]);
 
     return {

@@ -9,10 +9,11 @@ export class ProductsController {
 
   @Get()
   async getProducts(
+    @Req() req: any,
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
     @Query('search') search?: string,
   ) {
-    return this.appService.getProducts(Number(page), Number(limit), search);
+    return this.appService.getProducts(Number(page), Number(limit), search, req.user.id);
   }
 }

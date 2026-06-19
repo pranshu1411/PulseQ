@@ -6,4 +6,13 @@
     height: 100%;
     @apply bg-neutral-950 text-neutral-100 antialiased;
   }
+  
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    @apply cursor-pointer;
+  }
+  
+  button:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
 }

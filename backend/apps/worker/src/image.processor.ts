@@ -24,6 +24,10 @@ export class ImageProcessor extends BaseProcessor {
 
     this.logger.log(`Processing job ${job.id} of type ${job.name}`);
 
+    const dbJob = await this.prisma.job.findUnique({ where: { id: job.id } });
+    if (!dbJob) throw new Error('Job not found in DB');
+    const userId = dbJob.userId;
+
     const { imageUrl } = job.data;
     this.logger.log(`Downloading image from: ${imageUrl}`);
 
@@ -68,6 +72,7 @@ export class ImageProcessor extends BaseProcessor {
     this.logger.log('Saving image record to database...');
     await this.prisma.imageRecord.create({
       data: {
+        userId,
         originalUrl: imageUrl,
         thumbnailPath: result.thumbnailPath,
         compressedPath: result.compressedPath,

@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { Activity, Menu, LayoutDashboard, Image as ImageIcon, FileText, LogOut, Database, History, ChevronDown, PlusCircle } from 'lucide-react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useAuth } from '../context/AuthContext';
@@ -31,22 +31,33 @@ export default function DashboardLayout() {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isAssignJobsOpen, setIsAssignJobsOpen] = useState(false);
   const [isDataOpen, setIsDataOpen] = useState(false);
-  
+
   const { user, checkAuth } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const getPageTitle = (pathname: string) => {
+    if (pathname === '/') return 'Dashboard';
+    if (pathname === '/history') return 'Job History';
+    if (pathname === '/submit-image') return 'Submit Image Job';
+    if (pathname === '/submit-csv') return 'Submit CSV Job';
+    if (pathname === '/csv-records') return 'CSV Records';
+    if (pathname === '/image-records') return 'Image Records';
+    return 'Dashboard';
+  };
 
   useEffect(() => {
     const fetchInitialJobs = async () => {
       try {
         const { data } = await axios.get('http://localhost:4000/jobs', { withCredentials: true });
-        
+
         const initialStats = { active: 0, completed: 0, failed: 0, waiting: 0 };
         const initialEvents: JobEvent[] = data.map((job: any) => {
           let type: JobEvent['type'] = 'waiting';
           if (job.status === 'active') type = 'active';
           if (job.status === 'completed') type = 'completed';
           if (job.status === 'failed') type = 'failed';
-          
+
           if (type === 'active') initialStats.active++;
           if (type === 'completed') initialStats.completed++;
           if (type === 'failed') initialStats.failed++;
@@ -80,7 +91,7 @@ export default function DashboardLayout() {
 
     const handleEvent = (type: JobEvent['type']) => (data: Record<string, unknown>) => {
       setEvents((prev) => [{ ...data, type, timestamp: Date.now() } as JobEvent, ...prev].slice(0, 100));
-      
+
       if (type === 'completed') {
         toast.success(`Job ${data.jobName || data.jobId} completed successfully`);
       } else if (type === 'failed') {
@@ -135,108 +146,134 @@ export default function DashboardLayout() {
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans selection:bg-indigo-500/30">
       <aside className={cn(
-        "fixed top-0 left-0 z-40 h-screen w-64 transition-transform border-r border-neutral-800 bg-neutral-950 flex flex-col",
-        !isSidebarOpen && "-translate-x-full"
+        "fixed top-0 left-0 z-40 h-screen transition-all duration-300 border-r border-neutral-800 bg-neutral-950 flex flex-col",
+        isSidebarOpen ? "w-64" : "w-20"
       )}>
-        <div className="flex-1 flex flex-col px-3 py-4">
-          <div className="flex items-center mb-8 px-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mr-3 shadow-lg shadow-indigo-500/20">
+        <div className="flex-1 flex flex-col py-4 overflow-y-auto overflow-x-hidden">
+          <div className={cn("flex items-center mb-8", isSidebarOpen ? "px-6" : "px-0 justify-center")}>
+            <div className={cn("w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/20", isSidebarOpen ? "mr-3" : "")}>
               <Activity className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold tracking-tight text-white">PulseQ</span>
+            {isSidebarOpen && <span className="text-xl font-bold tracking-tight text-white">PulseQ</span>}
           </div>
-          <nav className="space-y-1">
-            <NavLink 
-              to="/" 
+
+          <nav className={cn("space-y-1", isSidebarOpen ? "px-3" : "px-3")}>
+            <NavLink
+              to="/"
               end
+              title="Dashboard"
               className={({ isActive }) => cn(
-                "w-full flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group", 
-                isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
+                "w-full flex items-center py-2.5 rounded-lg transition-all duration-200 group",
+                isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200",
+                isSidebarOpen ? "px-3" : "justify-center"
               )}
             >
-              <LayoutDashboard className="mr-3 w-5 h-5" /> Dashboard
+              <LayoutDashboard className={cn("w-5 h-5 shrink-0", isSidebarOpen ? "mr-3" : "")} />
+              {isSidebarOpen && <span>Dashboard</span>}
             </NavLink>
-            <NavLink 
-              to="/history" 
+            <NavLink
+              to="/history"
+              title="Job History"
               className={({ isActive }) => cn(
-                "w-full flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group", 
-                isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
+                "w-full flex items-center py-2.5 rounded-lg transition-all duration-200 group",
+                isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200",
+                isSidebarOpen ? "px-3" : "justify-center"
               )}
             >
-              <History className="mr-3 w-5 h-5" /> Job History
+              <History className={cn("w-5 h-5 shrink-0", isSidebarOpen ? "mr-3" : "")} />
+              {isSidebarOpen && <span>Job History</span>}
             </NavLink>
-            <div>
+
+            <div className="pt-2">
               <button
-                onClick={() => setIsAssignJobsOpen(!isAssignJobsOpen)}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
+                onClick={() => {
+                  if (!isSidebarOpen) {
+                    setSidebarOpen(true);
+                    setIsAssignJobsOpen(true);
+                  } else {
+                    setIsAssignJobsOpen(!isAssignJobsOpen);
+                  }
+                }}
+                title="Assign Jobs"
+                className={cn("w-full flex items-center py-2.5 rounded-lg transition-all duration-200 text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200", isSidebarOpen ? "px-3 justify-between" : "justify-center")}
               >
                 <div className="flex items-center">
-                  <PlusCircle className="mr-3 w-5 h-5" /> Assign Jobs
+                  <PlusCircle className={cn("w-5 h-5 shrink-0", isSidebarOpen ? "mr-3" : "")} />
+                  {isSidebarOpen && <span>Assign Jobs</span>}
                 </div>
-                <ChevronDown className={cn("w-4 h-4 transition-transform duration-200", isAssignJobsOpen ? "rotate-180" : "")} />
+                {isSidebarOpen && <ChevronDown className={cn("w-4 h-4 transition-transform duration-200 shrink-0", isAssignJobsOpen ? "rotate-180" : "")} />}
               </button>
-              
-              <div className={cn("overflow-hidden transition-all duration-200", isAssignJobsOpen ? "max-h-40 opacity-100 mt-1" : "max-h-0 opacity-0")}>
-                <NavLink 
-                  to="/submit-image" 
+
+              <div className={cn("overflow-hidden transition-all duration-200", isAssignJobsOpen && isSidebarOpen ? "max-h-40 opacity-100 mt-1" : "max-h-0 opacity-0")}>
+                <NavLink
+                  to="/submit-image"
                   className={({ isActive }) => cn(
-                    "w-full flex items-center pl-11 pr-3 py-2 rounded-lg transition-all duration-200 group text-sm", 
+                    "w-full flex items-center pl-11 pr-3 py-2 rounded-lg transition-all duration-200 group text-sm",
                     isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
                   )}
                 >
-                  <ImageIcon className="mr-2 w-4 h-4" /> Image Job
+                  <ImageIcon className="mr-2 w-4 h-4 shrink-0" /> <span className="whitespace-nowrap">Image Job</span>
                 </NavLink>
-                <NavLink 
-                  to="/submit-csv" 
+                <NavLink
+                  to="/submit-csv"
                   className={({ isActive }) => cn(
-                    "w-full flex items-center pl-11 pr-3 py-2 rounded-lg transition-all duration-200 group text-sm mt-1", 
+                    "w-full flex items-center pl-11 pr-3 py-2 rounded-lg transition-all duration-200 group text-sm mt-1",
                     isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
                   )}
                 >
-                  <FileText className="mr-2 w-4 h-4" /> CSV Job
+                  <FileText className="mr-2 w-4 h-4 shrink-0" /> <span className="whitespace-nowrap">CSV Job</span>
                 </NavLink>
               </div>
             </div>
-            
-            <div>
+
+            <div className="pt-2">
               <button
-                onClick={() => setIsDataOpen(!isDataOpen)}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
+                onClick={() => {
+                  if (!isSidebarOpen) {
+                    setSidebarOpen(true);
+                    setIsDataOpen(true);
+                  } else {
+                    setIsDataOpen(!isDataOpen);
+                  }
+                }}
+                title="Data"
+                className={cn("w-full flex items-center py-2.5 rounded-lg transition-all duration-200 text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200", isSidebarOpen ? "px-3 justify-between" : "justify-center")}
               >
                 <div className="flex items-center">
-                  <Database className="mr-3 w-5 h-5" /> Data
+                  <Database className={cn("w-5 h-5 shrink-0", isSidebarOpen ? "mr-3" : "")} />
+                  {isSidebarOpen && <span>Data</span>}
                 </div>
-                <ChevronDown className={cn("w-4 h-4 transition-transform duration-200", isDataOpen ? "rotate-180" : "")} />
+                {isSidebarOpen && <ChevronDown className={cn("w-4 h-4 transition-transform duration-200 shrink-0", isDataOpen ? "rotate-180" : "")} />}
               </button>
-              
-              <div className={cn("overflow-hidden transition-all duration-200", isDataOpen ? "max-h-40 opacity-100 mt-1" : "max-h-0 opacity-0")}>
-                <NavLink 
-                  to="/csv-records" 
+
+              <div className={cn("overflow-hidden transition-all duration-200", isDataOpen && isSidebarOpen ? "max-h-40 opacity-100 mt-1" : "max-h-0 opacity-0")}>
+                <NavLink
+                  to="/csv-records"
                   className={({ isActive }) => cn(
-                    "w-full flex items-center pl-11 pr-3 py-2 rounded-lg transition-all duration-200 group text-sm", 
+                    "w-full flex items-center pl-11 pr-3 py-2 rounded-lg transition-all duration-200 group text-sm",
                     isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
                   )}
                 >
-                  <FileText className="mr-2 w-4 h-4" /> CSV Records
+                  <FileText className="mr-2 w-4 h-4 shrink-0" /> <span className="whitespace-nowrap">CSV Records</span>
                 </NavLink>
-                <NavLink 
-                  to="/image-records" 
+                <NavLink
+                  to="/image-records"
                   className={({ isActive }) => cn(
-                    "w-full flex items-center pl-11 pr-3 py-2 rounded-lg transition-all duration-200 group text-sm mt-1", 
+                    "w-full flex items-center pl-11 pr-3 py-2 rounded-lg transition-all duration-200 group text-sm mt-1",
                     isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
                   )}
                 >
-                  <ImageIcon className="mr-2 w-4 h-4" /> Image Records
+                  <ImageIcon className="mr-2 w-4 h-4 shrink-0" /> <span className="whitespace-nowrap">Image Records</span>
                 </NavLink>
               </div>
             </div>
           </nav>
         </div>
-        
+
         {/* User Profile & Logout */}
         <div className="p-4 border-t border-neutral-800">
-          <div className="flex items-center justify-between mb-4 px-2">
-            <div className="flex items-center overflow-hidden">
+          <div className={cn("flex items-center mb-4", isSidebarOpen ? "justify-between px-2" : "justify-center")}>
+            <div className="flex items-center overflow-hidden" title={user?.name || 'User'}>
               <div className="w-8 h-8 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center shrink-0 overflow-hidden">
                 {user?.picture ? (
                   <img src={user.picture} alt="Profile" className="w-full h-full object-cover" />
@@ -244,28 +281,32 @@ export default function DashboardLayout() {
                   <span className="text-sm font-medium text-neutral-400">{user?.name?.charAt(0) || 'U'}</span>
                 )}
               </div>
-              <div className="ml-3 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{user?.name || 'User'}</p>
-                <p className="text-xs text-neutral-500 truncate">{user?.email}</p>
-              </div>
+              {isSidebarOpen && (
+                <div className="ml-3 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">{user?.name || 'User'}</p>
+                  <p className="text-xs text-neutral-500 truncate">{user?.email}</p>
+                </div>
+              )}
             </div>
           </div>
-          <button 
+          <button
             onClick={handleLogout}
-            className="w-full flex items-center px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+            title="Logout"
+            className={cn("w-full flex items-center py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors", isSidebarOpen ? "px-3" : "justify-center")}
           >
-            <LogOut className="w-4 h-4 mr-2" /> Logout
+            <LogOut className={cn("w-4 h-4 shrink-0", isSidebarOpen ? "mr-2" : "")} />
+            {isSidebarOpen && <span>Logout</span>}
           </button>
         </div>
       </aside>
 
-      <div className={cn("p-4 transition-all duration-300", isSidebarOpen ? "ml-64" : "ml-0")}>
+      <div className={cn("p-4 transition-all duration-300", isSidebarOpen ? "ml-64" : "ml-20")}>
         <header className="flex items-center justify-between mb-8 pb-4 border-b border-neutral-800">
           <div className="flex items-center">
             <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-2 mr-4 rounded-md hover:bg-neutral-800 text-neutral-400 transition-colors">
               <Menu className="w-5 h-5" />
             </button>
-            <h1 className="text-2xl font-semibold text-white tracking-tight capitalize">Dashboard</h1>
+            <h1 className="text-2xl font-semibold text-white tracking-tight capitalize">{getPageTitle(location.pathname)}</h1>
           </div>
           <div className="flex items-center space-x-2">
             <span className="relative flex h-3 w-3 mr-2">

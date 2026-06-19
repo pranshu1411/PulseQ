@@ -27,6 +27,10 @@ export class CsvProcessor extends BaseProcessor {
     const { fileUrl, batchSize = 100 } = job.data;
     this.logger.log(`Downloading CSV from: ${fileUrl} (batch size: ${batchSize})`);
 
+    const dbJob = await this.prisma.job.findUnique({ where: { id: job.id } });
+    if (!dbJob) throw new Error('Job not found in DB');
+    const userId = dbJob.userId;
+
     const originalsDir = path.join(process.cwd(), 'apps', 'worker', 'uploads', 'originals');
     await fsp.mkdir(originalsDir, { recursive: true });
 
@@ -101,7 +105,7 @@ export class CsvProcessor extends BaseProcessor {
                 return;
               }
 
-              batch.push({ name, category, price, stock, description });
+              batch.push({ name, category, price, stock, description, userId });
 
               if (batch.length >= batchSize) {
                 parser.pause();
