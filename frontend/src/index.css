@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+/* Base styles */
+@layer base {
+  html, body {
+    height: 100%;
+    @apply bg-neutral-950 text-neutral-100 antialiased;
+  }
+}
