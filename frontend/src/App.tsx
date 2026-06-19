@@ -31,9 +31,9 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
-          
-          <Route 
-            path="/" 
+
+          <Route
+            path="/"
             element={
               <ProtectedRoute>
                 <DashboardLayout />
@@ -43,8 +43,6 @@ export default function App() {
             <Route index element={<Dashboard />} />
             <Route path="submit" element={<SubmitJobs />} />
           </Route>
-
-          {/* Catch-all redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
