@@ -65,6 +65,18 @@ export class ImageProcessor extends BaseProcessor {
       compressedPath: `apps/worker/uploads/compressed/${filename}`
     };
 
+    this.logger.log('Saving image record to database...');
+    await this.prisma.imageRecord.create({
+      data: {
+        originalUrl: imageUrl,
+        thumbnailPath: result.thumbnailPath,
+        compressedPath: result.compressedPath,
+        format: result.format,
+        width: result.width,
+        height: result.height
+      }
+    });
+
     return result;
   }
 }

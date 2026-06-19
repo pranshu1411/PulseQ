@@ -236,4 +236,27 @@ export class AppService {
       },
     };
   }
+
+  async getImages(page: number, limit: number) {
+    const skip = (page - 1) * limit; // hot reload trigger
+
+    const [data, total] = await Promise.all([
+      this.prisma.imageRecord.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.imageRecord.count(),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
 }

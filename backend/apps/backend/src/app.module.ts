@@ -7,6 +7,7 @@ import { IMAGE_NAME, CSV_NAME } from '@app/shared';
 import { EventsModule } from './events/events.module';
 import { AuthModule } from './auth/auth.module';
 import { ProductsController } from './products.controller';
+import { ImagesController } from './images.controller';
 
 @Module({
   imports: [
@@ -25,7 +26,7 @@ import { ProductsController } from './products.controller';
       name: CSV_NAME
     }),
   ],
-  controllers: [AppController, ProductsController],
+  controllers: [AppController, ProductsController, ImagesController],
   providers: [AppService],
 })
 export class AppModule { }

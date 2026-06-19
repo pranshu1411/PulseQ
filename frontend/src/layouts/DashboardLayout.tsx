@@ -29,6 +29,7 @@ export default function DashboardLayout() {
   const [stats, setStats] = useState({ active: 0, completed: 0, failed: 0, waiting: 0 });
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isAssignJobsOpen, setIsAssignJobsOpen] = useState(false);
+  const [isDataOpen, setIsDataOpen] = useState(false);
   
   const { user, checkAuth } = useAuth();
   const navigate = useNavigate();
@@ -188,15 +189,38 @@ export default function DashboardLayout() {
               </div>
             </div>
             
-            <NavLink 
-              to="/csv-records" 
-              className={({ isActive }) => cn(
-                "w-full flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group", 
-                isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
-              )}
-            >
-              <Database className="mr-3 w-5 h-5" /> CSV Records
-            </NavLink>
+            <div>
+              <button
+                onClick={() => setIsDataOpen(!isDataOpen)}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
+              >
+                <div className="flex items-center">
+                  <Database className="mr-3 w-5 h-5" /> Data
+                </div>
+                <ChevronDown className={cn("w-4 h-4 transition-transform duration-200", isDataOpen ? "rotate-180" : "")} />
+              </button>
+              
+              <div className={cn("overflow-hidden transition-all duration-200", isDataOpen ? "max-h-40 opacity-100 mt-1" : "max-h-0 opacity-0")}>
+                <NavLink 
+                  to="/csv-records" 
+                  className={({ isActive }) => cn(
+                    "w-full flex items-center pl-11 pr-3 py-2 rounded-lg transition-all duration-200 group text-sm", 
+                    isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
+                  )}
+                >
+                  <FileText className="mr-2 w-4 h-4" /> CSV Records
+                </NavLink>
+                <NavLink 
+                  to="/image-records" 
+                  className={({ isActive }) => cn(
+                    "w-full flex items-center pl-11 pr-3 py-2 rounded-lg transition-all duration-200 group text-sm mt-1", 
+                    isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
+                  )}
+                >
+                  <ImageIcon className="mr-2 w-4 h-4" /> Image Records
+                </NavLink>
+              </div>
+            </div>
           </nav>
         </div>
         
