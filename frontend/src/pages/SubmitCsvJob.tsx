@@ -4,6 +4,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 export default function SubmitCsvJob() {
+  const [jobName, setJobName] = useState('');
   const [csvURL, setCsvURL] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -12,6 +13,7 @@ export default function SubmitCsvJob() {
     setLoading(true);
     try {
       await axios.post('http://localhost:4000/jobs/csv', {
+        jobName: jobName || undefined,
         fileUrl: csvURL,
         batchSize: 10
       }, { withCredentials: true });
@@ -40,6 +42,16 @@ export default function SubmitCsvJob() {
         </div>
         
         <form onSubmit={submitCsvJob} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-neutral-300 mb-2">Job Name (Optional)</label>
+            <input 
+              type="text" 
+              value={jobName} 
+              onChange={e => setJobName(e.target.value)} 
+              placeholder="e.g. Monthly Sales Import"
+              className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all placeholder:text-neutral-600 mb-6" 
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium text-neutral-300 mb-2">CSV URL</label>
             <input 

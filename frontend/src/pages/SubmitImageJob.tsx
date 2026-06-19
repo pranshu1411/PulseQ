@@ -4,6 +4,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 export default function SubmitImageJob() {
+  const [jobName, setJobName] = useState('');
   const [imageURL, setImageURL] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -12,6 +13,7 @@ export default function SubmitImageJob() {
     setLoading(true);
     try {
       await axios.post('http://localhost:4000/jobs/image', {
+        jobName: jobName || undefined,
         imageUrl: imageURL,
         operations: ['resize', 'compress'],
         metadata: { source: 'dashboard' }
@@ -41,6 +43,16 @@ export default function SubmitImageJob() {
         </div>
         
         <form onSubmit={submitImageJob} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-neutral-300 mb-2">Job Name (Optional)</label>
+            <input 
+              type="text" 
+              value={jobName} 
+              onChange={e => setJobName(e.target.value)} 
+              placeholder="e.g. Profile Picture Processing"
+              className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder:text-neutral-600 mb-6" 
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium text-neutral-300 mb-2">Image URL</label>
             <input 

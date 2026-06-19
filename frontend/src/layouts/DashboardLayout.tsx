@@ -15,6 +15,7 @@ function cn(...inputs: ClassValue[]) {
 export type JobEvent = {
   queueName: string;
   jobId: string;
+  jobName?: string;
   type: 'active' | 'completed' | 'failed' | 'progress' | 'waiting';
   data?: unknown;
   returnvalue?: any;
@@ -54,6 +55,7 @@ export default function DashboardLayout() {
           return {
             queueName: job.queue_name,
             jobId: job.id,
+            jobName: job.name,
             type,
             failedReason: job.error,
             timestamp: new Date(job.updated_at).getTime()
@@ -80,9 +82,9 @@ export default function DashboardLayout() {
       setEvents((prev) => [{ ...data, type, timestamp: Date.now() } as JobEvent, ...prev].slice(0, 100));
       
       if (type === 'completed') {
-        toast.success(`Job ${data.jobId} completed successfully`);
+        toast.success(`Job ${data.jobName || data.jobId} completed successfully`);
       } else if (type === 'failed') {
-        toast.error(`Job ${data.jobId} failed`);
+        toast.error(`Job ${data.jobName || data.jobId} failed`);
       }
 
       setStats((prev) => {

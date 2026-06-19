@@ -19,7 +19,7 @@ export class AppService {
     // 1. Create a job record in Postgres via Prisma
     const dbJob = await this.prisma.job.create({
       data: {
-        name: IMAGE_JOB_NAME,
+        name: payload.jobName || IMAGE_JOB_NAME,
         queue_name: IMAGE_NAME,
         status: 'queued',
         payload: payload as any,
@@ -62,7 +62,7 @@ export class AppService {
     // 1. Create a job record in Postgres via Prisma
     const dbJob = await this.prisma.job.create({
       data: {
-        name: CSV_JOB_NAME,
+        name: payload.jobName || CSV_JOB_NAME,
         queue_name: CSV_NAME,
         status: 'queued',
         payload: payload as any,

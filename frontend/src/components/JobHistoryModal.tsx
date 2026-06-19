@@ -68,7 +68,7 @@ export default function JobHistoryModal({ jobId, onClose }: JobHistoryModalProps
         <div className="flex items-center justify-between p-6 border-b border-neutral-800 bg-neutral-900/50">
           <div>
             <h2 className="text-xl font-bold text-white">Job History</h2>
-            <p className="text-sm text-neutral-400 mt-1 font-mono">{jobId}</p>
+            <p className="text-sm text-neutral-400 mt-1 font-mono">{job ? job.name : jobId}</p>
           </div>
           <button
             onClick={onClose}
@@ -92,8 +92,8 @@ export default function JobHistoryModal({ jobId, onClose }: JobHistoryModalProps
             <div className="space-y-6">
               <div className="flex items-center gap-4 p-4 rounded-lg bg-neutral-800/30 border border-neutral-800/50">
                 <div className="flex-1">
-                  <p className="text-sm text-neutral-400">Type</p>
-                  <p className="font-medium text-white capitalize">{job.name}</p>
+                  <p className="text-sm text-neutral-400">Queue</p>
+                  <p className="font-medium text-white capitalize">{job.queue_name}</p>
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-neutral-400">Status</p>

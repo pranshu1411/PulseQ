@@ -101,7 +101,7 @@ export default function JobHistory() {
             <table className="w-full text-left text-sm text-neutral-400">
               <thead className="text-xs uppercase bg-neutral-900/50 text-neutral-500 border-b border-neutral-800">
                 <tr>
-                  <th className="px-6 py-4 font-medium">Job ID</th>
+                  <th className="px-6 py-4 font-medium">Job Name</th>
                   <th className="px-6 py-4 font-medium">Type</th>
                   <th className="px-6 py-4 font-medium">Status</th>
                   <th className="px-6 py-4 font-medium">Created At</th>
@@ -123,11 +123,10 @@ export default function JobHistory() {
                         className="hover:bg-neutral-800/30 transition-colors cursor-pointer group"
                       >
                         <td className="px-6 py-4 font-mono text-xs text-neutral-300">
-                          {job.id}
+                          {job.name}
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
-                            <span className="font-medium text-white capitalize">{job.name}</span>
                             <span className="text-xs text-neutral-500">{job.queue_name}</span>
                           </div>
                         </td>

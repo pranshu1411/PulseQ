@@ -7,6 +7,10 @@ export const IMAGE_JOB_NAME = 'ProcessImage';
 export const CSV_JOB_NAME = 'ImportCSV';
 
 export class ImageProcessingPayload {
+  @IsOptional()
+  @IsString()
+  jobName?: string;
+
   @IsUrl()
   imageUrl: string;
 
@@ -20,6 +24,10 @@ export class ImageProcessingPayload {
 }
 
 export class CsvImportPayload {
+  @IsOptional()
+  @IsString()
+  jobName?: string;
+
   @IsUrl({ require_tld: false })
   fileUrl: string;
 
