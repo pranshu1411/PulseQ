@@ -5,9 +5,11 @@ import { BullModule } from '@nestjs/bullmq';
 import { PrismaModule } from '@app/prisma';
 import { IMAGE_NAME, CSV_NAME } from '@app/shared';
 import { EventsModule } from './events/events.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
+    AuthModule,
     EventsModule,
     PrismaModule,
     BullModule.forRoot({
