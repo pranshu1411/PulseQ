@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Param, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Req, UseGuards, Res, Query } from '@nestjs/common';
+import type { Response } from 'express';
 import { AppService } from './app.service';
 import { ImageProcessingPayload, CsvImportPayload } from '@app/shared';
 import { AuthGuard } from '@nestjs/passport';
@@ -31,5 +32,15 @@ export class AppController {
   @Get()
   async getAllJobs(@Req() req: any) {
     return this.appService.getAllJobs(req.user.id);
+  }
+
+  @Get(':id/download/:type')
+  async downloadJobFile(
+    @Param('id') jobId: string,
+    @Param('type') type: 'thumbnail' | 'compressed',
+    @Req() req: any,
+    @Res() res: Response,
+  ) {
+    return this.appService.downloadJobFile(jobId, type, req.user.id, res);
   }
 }

@@ -6,6 +6,7 @@ import { PrismaModule } from '@app/prisma';
 import { IMAGE_NAME, CSV_NAME } from '@app/shared';
 import { EventsModule } from './events/events.module';
 import { AuthModule } from './auth/auth.module';
+import { ProductsController } from './products.controller';
 
 @Module({
   imports: [
@@ -24,7 +25,7 @@ import { AuthModule } from './auth/auth.module';
       name: CSV_NAME
     }),
   ],
-  controllers: [AppController],
+  controllers: [AppController, ProductsController],
   providers: [AppService],
 })
 export class AppModule { }

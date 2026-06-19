@@ -1,4 +1,7 @@
 import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Response } from 'express';
+import * as path from 'path';
+import * as fs from 'fs';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '@app/prisma';
@@ -160,5 +163,74 @@ export class AppService {
       where: { userId },
       orderBy: { created_at: 'desc' },
     });
+  }
+
+  async downloadJobFile(jobId: string, type: 'thumbnail' | 'compressed', userId: string, res: Response) {
+    const job = await this.prisma.job.findUnique({ where: { id: jobId } });
+
+    if (!job || job.userId !== userId) {
+      throw new NotFoundException(`Job not found`);
+    }
+
+    if (job.queue_name !== IMAGE_NAME) {
+      throw new BadRequestException(`Only image jobs produce downloadable files`);
+    }
+
+    if (job.status !== 'completed') {
+      throw new BadRequestException(`Job is not completed yet`);
+    }
+
+    const result = job.result as any;
+    if (!result) {
+      throw new NotFoundException(`Job result not found`);
+    }
+
+    const relativePath = type === 'thumbnail' ? result.thumbnailPath : result.compressedPath;
+    if (!relativePath) {
+      throw new NotFoundException(`File path not found in job result`);
+    }
+
+    const absolutePath = path.join(process.cwd(), relativePath);
+
+    if (!fs.existsSync(absolutePath)) {
+      throw new NotFoundException(`File no longer exists on disk`);
+    }
+
+    res.download(absolutePath);
+  }
+
+  async getProducts(page: number, limit: number, search?: string) {
+    const skip = (page - 1) * limit;
+    
+    const whereClause = search
+      ? {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' as const } },
+            { category: { contains: search, mode: 'insensitive' as const } },
+          ],
+        }
+      : {};
+
+    const [data, total] = await Promise.all([
+      this.prisma.product.findMany({
+        where: whereClause,
+        skip,
+        take: limit,
+        orderBy: { id: 'desc' },
+      }),
+      this.prisma.product.count({
+        where: whereClause,
+      }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 }

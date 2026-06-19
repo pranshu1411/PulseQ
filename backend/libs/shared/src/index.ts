@@ -20,7 +20,7 @@ export class ImageProcessingPayload {
 }
 
 export class CsvImportPayload {
-  @IsUrl()
+  @IsUrl({ require_tld: false })
   fileUrl: string;
 
   @IsNumber()
