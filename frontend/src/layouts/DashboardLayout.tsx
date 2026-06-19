@@ -33,6 +33,40 @@ export default function DashboardLayout() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    const fetchInitialJobs = async () => {
+      try {
+        const { data } = await axios.get('http://localhost:4000/jobs', { withCredentials: true });
+        
+        const initialStats = { active: 0, completed: 0, failed: 0, waiting: 0 };
+        const initialEvents: JobEvent[] = data.map((job: any) => {
+          let type: JobEvent['type'] = 'waiting';
+          if (job.status === 'active') type = 'active';
+          if (job.status === 'completed') type = 'completed';
+          if (job.status === 'failed') type = 'failed';
+          
+          if (type === 'active') initialStats.active++;
+          if (type === 'completed') initialStats.completed++;
+          if (type === 'failed') initialStats.failed++;
+          if (type === 'waiting') initialStats.waiting++;
+
+          return {
+            queueName: job.queue_name,
+            jobId: job.id,
+            type,
+            failedReason: job.error,
+            timestamp: new Date(job.updated_at).getTime()
+          };
+        });
+
+        setStats(initialStats);
+        setEvents(initialEvents.slice(0, 100));
+      } catch (err) {
+        console.error('Failed to fetch initial jobs', err);
+      }
+    };
+
+    fetchInitialJobs();
+
     const newSocket = io('http://localhost:4000', {
       transports: ['websocket'],
     });
