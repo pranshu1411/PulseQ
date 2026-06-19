@@ -102,7 +102,7 @@ export class AppService {
   }
 
   async getJobById(jobId: string, userId: string) {
-    const job = await this.prisma.job.findUnique({ 
+    const job = await this.prisma.job.findUnique({
       where: { id: jobId },
       include: { logs: { orderBy: { created_at: 'asc' } } }
     });
@@ -204,15 +204,14 @@ export class AppService {
 
   async getProducts(page: number, limit: number, search?: string, userId?: string) {
     const skip = (page - 1) * limit;
-    
+
     const whereClause: any = { userId };
-    
+
     if (search) {
       whereClause.OR = [
-            { name: { contains: search, mode: 'insensitive' as const } },
-            { category: { contains: search, mode: 'insensitive' as const } },
-          ],
-        };
+        { name: { contains: search, mode: 'insensitive' as const } },
+        { category: { contains: search, mode: 'insensitive' as const } },
+      ];
     }
 
     const [data, total] = await Promise.all([
@@ -239,7 +238,7 @@ export class AppService {
   }
 
   async getImages(page: number, limit: number, userId?: string) {
-    const skip = (page - 1) * limit; // hot reload trigger
+    const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
       this.prisma.imageRecord.findMany({

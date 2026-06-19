@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { Activity, Menu, LayoutDashboard, Image as ImageIcon, FileText, LogOut, Database, History, ChevronDown, PlusCircle } from 'lucide-react';
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useAuth } from '../context/AuthContext';
@@ -33,7 +33,6 @@ export default function DashboardLayout() {
   const [isDataOpen, setIsDataOpen] = useState(false);
 
   const { user, checkAuth } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
 
   const getPageTitle = (pathname: string) => {
@@ -74,6 +73,7 @@ export default function DashboardLayout() {
         });
 
         setStats(initialStats);
+        setEvents(initialEvents);
       } catch (err) {
         console.error('Failed to fetch initial stats', err);
       }
