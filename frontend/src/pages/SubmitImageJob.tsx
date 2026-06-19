@@ -4,7 +4,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 export default function SubmitImageJob() {
-  const [imageURL, setImageURL] = useState('https://picsum.photos/800/600');
+  const [imageURL, setImageURL] = useState('');
   const [loading, setLoading] = useState(false);
 
   const submitImageJob = async (e: React.FormEvent) => {
@@ -47,7 +47,8 @@ export default function SubmitImageJob() {
               type="text" 
               value={imageURL} 
               onChange={e => setImageURL(e.target.value)} 
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all" 
+              placeholder="https://picsum.photos/800/600"
+              className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder:text-neutral-600" 
               required 
             />
           </div>

@@ -4,7 +4,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 export default function SubmitCsvJob() {
-  const [csvURL, setCsvURL] = useState('https://raw.githubusercontent.com/fivethirtyeight/data/master/airline-safety/airline-safety.csv');
+  const [csvURL, setCsvURL] = useState('');
   const [loading, setLoading] = useState(false);
 
   const submitCsvJob = async (e: React.FormEvent) => {
@@ -46,7 +46,8 @@ export default function SubmitCsvJob() {
               type="text" 
               value={csvURL} 
               onChange={e => setCsvURL(e.target.value)} 
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all" 
+              placeholder="https://raw.githubusercontent.com/fivethirtyeight/data/master/airline-safety/airline-safety.csv"
+              className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all placeholder:text-neutral-600" 
               required 
             />
           </div>
