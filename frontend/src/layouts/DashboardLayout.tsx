@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { Activity, Menu, LayoutDashboard, Image as ImageIcon, FileText, LogOut, Database, History, ChevronDown, PlusCircle } from 'lucide-react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Link, Outlet, useLocation } from 'react-router-dom';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useAuth } from '../context/AuthContext';
@@ -272,7 +272,7 @@ export default function DashboardLayout() {
 
         {/* User Profile & Logout */}
         <div className="p-4 border-t border-neutral-800">
-          <div className={cn("flex items-center mb-4", isSidebarOpen ? "justify-between px-2" : "justify-center")}>
+          <Link to="/profile" className={cn("flex items-center mb-4 hover:bg-neutral-800/50 p-2 rounded-lg transition-colors cursor-pointer", isSidebarOpen ? "justify-between" : "justify-center")}>
             <div className="flex items-center overflow-hidden" title={user?.name || 'User'}>
               <div className="w-8 h-8 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center shrink-0 overflow-hidden">
                 {user?.picture ? (
@@ -288,7 +288,7 @@ export default function DashboardLayout() {
                 </div>
               )}
             </div>
-          </div>
+          </Link>
           <button
             onClick={handleLogout}
             title="Logout"

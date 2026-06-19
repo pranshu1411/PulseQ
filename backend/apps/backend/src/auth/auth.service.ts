@@ -43,4 +43,24 @@ export class AuthService {
       picture: user.avatarUrl,
     };
   }
+
+  async updateUser(userId: string, data: { name?: string; avatarUrl?: string }) {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data,
+    });
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      picture: user.avatarUrl,
+    };
+  }
+
+  async deleteUser(userId: string) {
+    await this.prisma.user.delete({
+      where: { id: userId },
+    });
+    return { success: true };
+  }
 }
