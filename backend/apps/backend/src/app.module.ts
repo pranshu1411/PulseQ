@@ -4,9 +4,11 @@ import { AppService } from './app.service';
 import { BullModule } from '@nestjs/bullmq';
 import { PrismaModule } from '@app/prisma';
 import { IMAGE_NAME, CSV_NAME } from '@app/shared';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
+    EventsModule,
     PrismaModule,
     BullModule.forRoot({
       connection: {
