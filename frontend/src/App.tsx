@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import axios from 'axios';
 import { io, Socket } from 'socket.io-client';
 import { Activity, CheckCircle2, Clock, XCircle, FileText, Image as ImageIcon, Menu, LayoutDashboard, Send } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
@@ -188,15 +189,11 @@ function JobSubmitForm() {
     e.preventDefault();
     setLoading(true);
     try {
-      await fetch('http://localhost:4000/jobs/image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageUrl: imageURL,
-          operations: ['resize', 'compress'],
-          metadata: { source: 'dashboard' }
-        })
-      });
+      await axios.post('http://localhost:4000/jobs/image', {
+        imageUrl: imageURL,
+        operations: ['resize', 'compress'],
+        metadata: { source: 'dashboard' }
+      }, { withCredentials: true });
       alert('Image job submitted');
     } catch (e: unknown) {
       if (e instanceof Error) {
@@ -212,14 +209,10 @@ function JobSubmitForm() {
     e.preventDefault();
     setLoading(true);
     try {
-      await fetch('http://localhost:4000/jobs/csv', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileUrl: csvURL,
-          batchSize: 10
-        })
-      });
+      await axios.post('http://localhost:4000/jobs/csv', {
+        fileUrl: csvURL,
+        batchSize: 10
+      }, { withCredentials: true });
       alert('CSV job submitted');
     } catch (e: unknown) {
       if (e instanceof Error) {
