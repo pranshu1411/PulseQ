@@ -1,10 +1,12 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import DashboardLayout from './layouts/DashboardLayout';
 import Dashboard from './pages/Dashboard';
-import SubmitJobs from './pages/SubmitJobs';
+import SubmitImageJob from './pages/SubmitImageJob';
+import SubmitCsvJob from './pages/SubmitCsvJob';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -29,6 +31,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <Toaster position="top-right" />
         <Routes>
           <Route path="/login" element={<Login />} />
 
@@ -41,7 +44,8 @@ export default function App() {
             }
           >
             <Route index element={<Dashboard />} />
-            <Route path="submit" element={<SubmitJobs />} />
+            <Route path="submit-image" element={<SubmitImageJob />} />
+            <Route path="submit-csv" element={<SubmitCsvJob />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

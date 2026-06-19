@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { Activity, Menu, LayoutDashboard, Send, LogOut } from 'lucide-react';
+import { Activity, Menu, LayoutDashboard, Image as ImageIcon, FileText, LogOut } from 'lucide-react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -78,9 +79,11 @@ export default function DashboardLayout() {
   const handleLogout = async () => {
     try {
       await axios.get('http://localhost:4000/auth/logout', { withCredentials: true });
+      toast.success('Logged out successfully');
       await checkAuth(); // Will set user to null and trigger redirect
     } catch (error) {
       console.error('Logout failed', error);
+      toast.error('Failed to log out');
     }
   };
 
@@ -109,13 +112,22 @@ export default function DashboardLayout() {
               <LayoutDashboard className="mr-3 w-5 h-5" /> Dashboard
             </NavLink>
             <NavLink 
-              to="/submit" 
+              to="/submit-image" 
               className={({ isActive }) => cn(
                 "w-full flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group", 
                 isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
               )}
             >
-              <Send className="mr-3 w-5 h-5" /> Submit Jobs
+              <ImageIcon className="mr-3 w-5 h-5" /> Image Job
+            </NavLink>
+            <NavLink 
+              to="/submit-csv" 
+              className={({ isActive }) => cn(
+                "w-full flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group", 
+                isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
+              )}
+            >
+              <FileText className="mr-3 w-5 h-5" /> CSV Job
             </NavLink>
           </nav>
         </div>
