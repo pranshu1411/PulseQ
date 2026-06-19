@@ -41,6 +41,11 @@ export class CsvProcessor extends BaseProcessor {
       throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
     }
 
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.startsWith('image/') || contentType.startsWith('video/')) {
+      throw new Error(`Invalid file type. The URL points to media (${contentType}), not a CSV.`);
+    }
+
     if (!response.body) {
       throw new Error('Response body is empty');
     }
@@ -122,11 +127,15 @@ export class CsvProcessor extends BaseProcessor {
             try {
               await flushBatch();
               
+              if (processedRows > 0 && importedRows === 0) {
+                return reject(new Error('All rows failed validation. The file might not be a valid CSV format.'));
+              }
+
               resolve({
                 totalRows: processedRows,
                 importedRows,
                 failedRows,
-                errors,
+                errors: errors.slice(0, 50), // Only return first 50 errors to avoid massive logs
               });
             } catch (err) {
               reject(err);

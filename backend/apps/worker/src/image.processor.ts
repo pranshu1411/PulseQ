@@ -73,6 +73,7 @@ export class ImageProcessor extends BaseProcessor {
     await this.prisma.imageRecord.create({
       data: {
         userId,
+        jobId: job.id,
         originalUrl: imageUrl,
         thumbnailPath: result.thumbnailPath,
         compressedPath: result.compressedPath,

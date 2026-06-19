@@ -42,37 +42,40 @@ export default function DashboardLayout() {
     if (pathname === '/submit-csv') return 'Submit CSV Job';
     if (pathname === '/csv-records') return 'CSV Records';
     if (pathname === '/image-records') return 'Image Records';
+    if (pathname === '/profile') return 'User Profile';
     return 'Dashboard';
   };
 
   useEffect(() => {
     const fetchInitialJobs = async () => {
       try {
-        const { data } = await axios.get('http://localhost:4000/jobs', { withCredentials: true });
+        const [statsRes, jobsRes] = await Promise.all([
+          axios.get('http://localhost:4000/jobs/stats', { withCredentials: true }),
+          axios.get('http://localhost:4000/jobs?limit=50', { withCredentials: true })
+        ]);
 
-        const initialStats = { active: 0, completed: 0, failed: 0, waiting: 0 };
-        const initialEvents: JobEvent[] = data.map((job: any) => {
-          let type: JobEvent['type'] = 'waiting';
-          if (job.status === 'active') type = 'active';
-          if (job.status === 'completed') type = 'completed';
-          if (job.status === 'failed') type = 'failed';
+        const clearedAtStr = localStorage.getItem('pulseq_events_cleared_at');
+        const clearedAt = clearedAtStr ? parseInt(clearedAtStr, 10) : 0;
 
-          if (type === 'active') initialStats.active++;
-          if (type === 'completed') initialStats.completed++;
-          if (type === 'failed') initialStats.failed++;
-          if (type === 'waiting') initialStats.waiting++;
+        const initialEvents: JobEvent[] = jobsRes.data.data
+          .filter((job: any) => new Date(job.updated_at).getTime() > clearedAt)
+          .map((job: any) => {
+            let type: JobEvent['type'] = 'waiting';
+            if (job.status === 'active') type = 'active';
+            if (job.status === 'completed') type = 'completed';
+            if (job.status === 'failed') type = 'failed';
 
-          return {
-            queueName: job.queue_name,
-            jobId: job.id,
-            jobName: job.name,
-            type,
-            failedReason: job.error,
-            timestamp: new Date(job.updated_at).getTime()
-          };
-        });
+            return {
+              queueName: job.queue_name,
+              jobId: job.id,
+              jobName: job.name,
+              type,
+              failedReason: job.error,
+              timestamp: new Date(job.updated_at).getTime()
+            };
+          });
 
-        setStats(initialStats);
+        setStats(statsRes.data);
         setEvents(initialEvents);
       } catch (err) {
         console.error('Failed to fetch initial stats', err);
@@ -318,7 +321,14 @@ export default function DashboardLayout() {
         </header>
 
         {/* Content Area */}
-        <Outlet context={{ events, stats, clearEvents: () => setEvents([]) }} />
+        <Outlet context={{ 
+          events, 
+          stats, 
+          clearEvents: () => {
+            setEvents([]);
+            localStorage.setItem('pulseq_events_cleared_at', Date.now().toString());
+          } 
+        }} />
       </div>
     </div>
   );

@@ -54,6 +54,7 @@ model Job {
   completed_at DateTime?
   
   logs         JobLog[]
+  imageRecords ImageRecord[]
 
   @@map("jobs")
 }
@@ -106,6 +107,8 @@ model ImageRecord {
   height         Int?
   userId         String
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId          String?
+  job            Job?     @relation(fields: [jobId], references: [id], onDelete: Cascade)
   createdAt      DateTime @default(now())
 
   @@map("image_records")

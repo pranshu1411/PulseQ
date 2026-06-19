@@ -11,7 +11,7 @@ export class ImageProcessingPayload {
   @IsString()
   jobName?: string;
 
-  @IsUrl()
+  @IsUrl({ require_tld: false })
   imageUrl: string;
 
   @IsArray()

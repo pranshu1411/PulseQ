@@ -11,6 +11,10 @@ type ImageRecord = {
   width: number | null;
   height: number | null;
   createdAt: string;
+  job?: {
+    id: string;
+    name: string;
+  } | null;
 };
 
 type Meta = {
@@ -70,6 +74,7 @@ export default function ImageRecords() {
             <thead className="bg-neutral-800/50 text-neutral-400 uppercase text-xs">
               <tr>
                 <th className="px-6 py-4 font-medium">Original URL</th>
+                <th className="px-6 py-4 font-medium">Job Info</th>
                 <th className="px-6 py-4 font-medium">Format</th>
                 <th className="px-6 py-4 font-medium">Dimensions</th>
                 <th className="px-6 py-4 font-medium">Processed At</th>
@@ -79,7 +84,7 @@ export default function ImageRecords() {
             <tbody className="divide-y divide-neutral-800">
               {images.length === 0 && !loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-neutral-500">
+                  <td colSpan={6} className="px-6 py-12 text-center text-neutral-500">
                     No records found
                   </td>
                 </tr>
@@ -99,6 +104,12 @@ export default function ImageRecords() {
                       </a>
                     </td>
                     <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="text-neutral-200 font-medium">{img.job?.name || 'Unknown Job'}</span>
+                        <span className="text-neutral-500 text-xs font-mono">{img.job?.id || 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-neutral-800 text-neutral-300 uppercase">
                         {img.format || 'unknown'}
                       </span>
@@ -111,22 +122,28 @@ export default function ImageRecords() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
-                         <a 
-                            href={`http://localhost:4000/${img.thumbnailPath}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center px-2 py-1 text-xs font-medium text-neutral-300 bg-neutral-800 hover:bg-neutral-700 rounded transition-colors"
-                          >
-                            Thumbnail
-                          </a>
-                          <a 
-                            href={`http://localhost:4000/${img.compressedPath}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center px-2 py-1 text-xs font-medium text-neutral-300 bg-neutral-800 hover:bg-neutral-700 rounded transition-colors"
-                          >
-                            Compressed
-                          </a>
+                        {img.job?.id ? (
+                          <>
+                            <a 
+                              href={`http://localhost:4000/jobs/${img.job.id}/download/thumbnail`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center px-2 py-1 text-xs font-medium text-neutral-300 bg-neutral-800 hover:bg-neutral-700 rounded transition-colors"
+                            >
+                              Thumbnail
+                            </a>
+                            <a 
+                              href={`http://localhost:4000/jobs/${img.job.id}/download/compressed`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center px-2 py-1 text-xs font-medium text-neutral-300 bg-neutral-800 hover:bg-neutral-700 rounded transition-colors"
+                            >
+                              Compressed
+                            </a>
+                          </>
+                        ) : (
+                          <span className="text-xs text-neutral-600">Downloads unavailable for legacy records</span>
+                        )}
                       </div>
                     </td>
                   </tr>

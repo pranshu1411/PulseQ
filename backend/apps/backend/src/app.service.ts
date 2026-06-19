@@ -161,11 +161,44 @@ export class AppService {
     return { message: `Job ${jobId} has been requeued for processing.` };
   }
 
-  async getAllJobs(userId: string) {
-    return this.prisma.job.findMany({
+  async getAllJobs(page: number, limit: number, userId: string) {
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      this.prisma.job.findMany({
+        where: { userId },
+        skip,
+        take: limit,
+        orderBy: { created_at: 'desc' },
+      }),
+      this.prisma.job.count({ where: { userId } }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getJobStats(userId: string) {
+    const stats = await this.prisma.job.groupBy({
+      by: ['status'],
       where: { userId },
-      orderBy: { created_at: 'desc' },
+      _count: true,
     });
+
+    const result = { active: 0, completed: 0, failed: 0, waiting: 0 };
+    for (const stat of stats) {
+      if (stat.status === 'active') result.active += stat._count;
+      else if (stat.status === 'completed') result.completed += stat._count;
+      else if (stat.status === 'failed') result.failed += stat._count;
+      else result.waiting += stat._count;
+    }
+    return result;
   }
 
   async downloadJobFile(jobId: string, type: 'thumbnail' | 'compressed', userId: string, res: Response) {
@@ -243,6 +276,7 @@ export class AppService {
     const [data, total] = await Promise.all([
       this.prisma.imageRecord.findMany({
         where: { userId },
+        include: { job: true },
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },

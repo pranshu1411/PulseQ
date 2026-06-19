@@ -1,6 +1,6 @@
 import { useEffect, useState, Fragment } from 'react';
 import axios from 'axios';
-import { History, Activity, CheckCircle2, XCircle, Clock, Loader2, Download } from 'lucide-react';
+import { History, Activity, CheckCircle2, XCircle, Clock, Loader2, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import JobHistoryModal from '../components/JobHistoryModal';
 
 type Job = {
@@ -13,16 +13,30 @@ type Job = {
   updated_at: string;
 };
 
+type Meta = {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
 export default function JobHistory() {
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [meta, setMeta] = useState<Meta | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     const fetchJobs = async () => {
+      setLoading(true);
       try {
-        const { data } = await axios.get('http://localhost:4000/jobs', { withCredentials: true });
-        setJobs(data);
+        const { data } = await axios.get(`http://localhost:4000/jobs`, { 
+          params: { page, limit: 10 },
+          withCredentials: true 
+        });
+        setJobs(data.data);
+        setMeta(data.meta);
       } catch (err) {
         console.error('Failed to fetch jobs', err);
       } finally {
@@ -31,7 +45,7 @@ export default function JobHistory() {
     };
 
     fetchJobs();
-  }, []);
+  }, [page]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -73,27 +87,30 @@ export default function JobHistory() {
 
   return (
     <>
-      <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl">
+      <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl flex flex-col">
         <div className="px-6 py-4 border-b border-neutral-800 bg-neutral-900/80 flex items-center justify-between">
           <div className="flex items-center">
             <div className="p-2 bg-neutral-800/50 rounded-lg border border-neutral-700/50 mr-3">
               <History className="w-5 h-5 text-indigo-400" />
             </div>
-            <h2 className="text-lg font-medium text-white">All Job History</h2>
+            <h2 className="text-lg font-medium text-white">Job History</h2>
           </div>
-          <div className="px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold uppercase tracking-wider">
-            {jobs.length} Jobs
-          </div>
+          {meta && (
+            <div className="px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold uppercase tracking-wider">
+              {meta.total} Total Jobs
+            </div>
+          )}
         </div>
 
-        <div className="overflow-x-auto min-h-[400px]">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-4" />
-              <p className="text-neutral-400">Loading job history...</p>
+        <div className="overflow-x-auto flex-1 relative min-h-[400px]">
+          {loading && (
+            <div className="absolute inset-0 bg-neutral-900/50 backdrop-blur-sm flex items-center justify-center z-10">
+              <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
             </div>
-          ) : jobs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-neutral-500">
+          )}
+          
+          {jobs.length === 0 && !loading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-neutral-500 h-full">
               <History className="w-12 h-12 mb-4 opacity-20" />
               <p>No job history found.</p>
             </div>
@@ -171,6 +188,34 @@ export default function JobHistory() {
             </table>
           )}
         </div>
+
+        {/* Pagination */}
+        {meta && meta.totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-neutral-800 bg-neutral-900/50 mt-auto">
+            <span className="text-sm text-neutral-400">
+              Showing <span className="text-white font-medium">{(meta.page - 1) * meta.limit + 1}</span> to{' '}
+              <span className="text-white font-medium">{Math.min(meta.page * meta.limit, meta.total)}</span> of{' '}
+              <span className="text-white font-medium">{meta.total}</span> jobs
+            </span>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setPage(p => Math.min(meta.totalPages, p + 1))}
+                disabled={page === meta.totalPages}
+                className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {selectedJobId && (
