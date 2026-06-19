@@ -102,7 +102,10 @@ export class AppService {
   }
 
   async getJobById(jobId: string, userId: string) {
-    const job = await this.prisma.job.findUnique({ where: { id: jobId } });
+    const job = await this.prisma.job.findUnique({ 
+      where: { id: jobId },
+      include: { logs: { orderBy: { created_at: 'asc' } } }
+    });
 
     if (!job || job.userId !== userId) {
       throw new NotFoundException(`Job with ID ${jobId} not found`);

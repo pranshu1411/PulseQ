@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { Activity, Menu, LayoutDashboard, Image as ImageIcon, FileText, LogOut, Database } from 'lucide-react';
+import { Activity, Menu, LayoutDashboard, Image as ImageIcon, FileText, LogOut, Database, History } from 'lucide-react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -59,9 +59,8 @@ export default function DashboardLayout() {
         });
 
         setStats(initialStats);
-        setEvents(initialEvents.slice(0, 100));
       } catch (err) {
-        console.error('Failed to fetch initial jobs', err);
+        console.error('Failed to fetch initial stats', err);
       }
     };
 
@@ -147,6 +146,15 @@ export default function DashboardLayout() {
               <LayoutDashboard className="mr-3 w-5 h-5" /> Dashboard
             </NavLink>
             <NavLink 
+              to="/history" 
+              className={({ isActive }) => cn(
+                "w-full flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group", 
+                isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
+              )}
+            >
+              <History className="mr-3 w-5 h-5" /> Job History
+            </NavLink>
+            <NavLink 
               to="/submit-image" 
               className={({ isActive }) => cn(
                 "w-full flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group", 
@@ -220,7 +228,7 @@ export default function DashboardLayout() {
         </header>
 
         {/* Content Area */}
-        <Outlet context={{ events, stats }} />
+        <Outlet context={{ events, stats, clearEvents: () => setEvents([]) }} />
       </div>
     </div>
   );

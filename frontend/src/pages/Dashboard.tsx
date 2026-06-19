@@ -1,15 +1,18 @@
-import React from 'react';
-import { Activity, CheckCircle2, Clock, XCircle, Download } from 'lucide-react';
+import React, { useState } from 'react';
+import { Activity, CheckCircle2, Clock, XCircle, Download, Trash2 } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import type { JobEvent } from '../layouts/DashboardLayout';
+import JobHistoryModal from '../components/JobHistoryModal';
 
 type DashboardContextType = {
   events: JobEvent[];
   stats: { active: number; completed: number; failed: number; waiting: number };
+  clearEvents: () => void;
 };
 
 export default function Dashboard() {
-  const { events, stats } = useOutletContext<DashboardContextType>();
+  const { events, stats, clearEvents } = useOutletContext<DashboardContextType>();
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
 
   return (
     <>
@@ -23,8 +26,17 @@ export default function Dashboard() {
       <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl">
         <div className="px-6 py-4 border-b border-neutral-800 bg-neutral-900/80 flex items-center justify-between">
           <h2 className="text-lg font-medium text-white">Live Event Stream</h2>
-          <div className="px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold uppercase tracking-wider">
-            {events.length} Events
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={clearEvents}
+              title="Clear all events from the UI (does not delete jobs from the database)"
+              className="px-3 py-1.5 rounded-md bg-neutral-800/80 hover:bg-red-500/20 hover:text-red-400 text-neutral-400 text-xs font-medium transition-colors flex items-center gap-1.5 border border-neutral-700/50 hover:border-red-500/30"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Clear
+            </button>
+            <div className="px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold uppercase tracking-wider">
+              {events.length} Events
+            </div>
           </div>
         </div>
         <div className="divide-y divide-neutral-800/50 max-h-[600px] overflow-y-auto p-2">
@@ -35,7 +47,11 @@ export default function Dashboard() {
             </div>
           ) : (
             events.map((ev, i) => (
-              <div key={i} className="flex items-center p-4 hover:bg-neutral-800/40 rounded-lg transition-colors group">
+              <div 
+                key={i} 
+                className="flex items-center p-4 hover:bg-neutral-800/40 rounded-lg transition-colors group cursor-pointer"
+                onClick={() => setSelectedJobId(ev.jobId)}
+              >
                 <div className="mr-4 mt-1 self-start">
                   {ev.type === 'active' && <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />}
                   {ev.type === 'completed' && <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />}
@@ -70,6 +86,7 @@ export default function Dashboard() {
                         href={`http://localhost:4000/jobs/${ev.jobId}/download/thumbnail`}
                         target="_blank"
                         rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
                         className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-md transition-colors"
                       >
                         <Download className="w-3.5 h-3.5 mr-1.5" /> Thumbnail
@@ -78,6 +95,7 @@ export default function Dashboard() {
                         href={`http://localhost:4000/jobs/${ev.jobId}/download/compressed`}
                         target="_blank"
                         rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
                         className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-md transition-colors"
                       >
                         <Download className="w-3.5 h-3.5 mr-1.5" /> Compressed
@@ -90,6 +108,13 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+      
+      {selectedJobId && (
+        <JobHistoryModal 
+          jobId={selectedJobId} 
+          onClose={() => setSelectedJobId(null)} 
+        />
+      )}
     </>
   );
 }
