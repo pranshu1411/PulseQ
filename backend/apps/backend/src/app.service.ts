@@ -6,6 +6,8 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '@app/prisma';
 import { IMAGE_NAME, ImageProcessingPayload, CSV_NAME, CsvImportPayload, IMAGE_JOB_NAME, CSV_JOB_NAME } from '@app/shared';
+import { InjectMetric } from '@willsoto/nestjs-prometheus';
+import { Counter } from 'prom-client';
 
 @Injectable()
 export class AppService {
@@ -13,6 +15,7 @@ export class AppService {
     @InjectQueue(IMAGE_NAME) private readonly imageQueue: Queue<ImageProcessingPayload>,
     @InjectQueue(CSV_NAME) private readonly csvQueue: Queue<CsvImportPayload>,
     private readonly prisma: PrismaService,
+    @InjectMetric('pulseq_jobs_added_total') private readonly jobsAddedCounter: Counter<string>,
   ) { }
 
   async createImageJob(payload: ImageProcessingPayload, userId: string) {
@@ -40,6 +43,8 @@ export class AppService {
         removeOnComplete: true,
         removeOnFail: true,
       });
+
+      this.jobsAddedCounter.labels(IMAGE_NAME).inc();
 
       return {
         message: 'Image Job created successfully',
@@ -83,6 +88,8 @@ export class AppService {
         removeOnComplete: true,
         removeOnFail: true,
       });
+
+      this.jobsAddedCounter.labels(CSV_NAME).inc();
 
       return {
         message: 'Csv Job created successfully',

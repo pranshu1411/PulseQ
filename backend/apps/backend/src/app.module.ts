@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PrometheusModule, makeCounterProvider } from '@willsoto/nestjs-prometheus';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { BullModule } from '@nestjs/bullmq';
@@ -11,6 +12,7 @@ import { ImagesController } from './images.controller';
 
 @Module({
   imports: [
+    PrometheusModule.register(),
     AuthModule,
     EventsModule,
     PrismaModule,
@@ -27,6 +29,13 @@ import { ImagesController } from './images.controller';
     }),
   ],
   controllers: [AppController, ProductsController, ImagesController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    makeCounterProvider({
+      name: 'pulseq_jobs_added_total',
+      help: 'Total number of jobs added to the queue',
+      labelNames: ['queue_name'],
+    }),
+  ],
 })
 export class AppModule { }

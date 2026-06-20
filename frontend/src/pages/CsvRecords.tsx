@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Database, Search, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 
@@ -64,7 +64,7 @@ export default function CsvRecords() {
           </h1>
           <p className="text-neutral-400 text-sm mt-1">View and search imported product data</p>
         </div>
-        
+
         <div className="relative w-full sm:w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
           <input
@@ -83,7 +83,7 @@ export default function CsvRecords() {
             <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
           </div>
         )}
-        
+
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-neutral-300">
             <thead className="bg-neutral-800/50 text-neutral-400 uppercase text-xs">
@@ -127,7 +127,7 @@ export default function CsvRecords() {
               <span className="text-white font-medium">{Math.min(meta.page * meta.limit, meta.total)}</span> of{' '}
               <span className="text-white font-medium">{meta.total}</span> results
             </span>
-            
+
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}

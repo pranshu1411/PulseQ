@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Image as ImageIcon, ChevronLeft, ChevronRight, Loader2, ExternalLink } from 'lucide-react';
 
@@ -68,7 +68,7 @@ export default function ImageRecords() {
             <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
           </div>
         )}
-        
+
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-neutral-300">
             <thead className="bg-neutral-800/50 text-neutral-400 uppercase text-xs">
@@ -92,9 +92,9 @@ export default function ImageRecords() {
                 images.map((img) => (
                   <tr key={img.id} className="hover:bg-neutral-800/20 transition-colors">
                     <td className="px-6 py-4">
-                      <a 
-                        href={img.originalUrl} 
-                        target="_blank" 
+                      <a
+                        href={img.originalUrl}
+                        target="_blank"
                         rel="noreferrer"
                         className="text-indigo-400 hover:text-indigo-300 flex items-center gap-1 max-w-[250px] truncate"
                         title={img.originalUrl}
@@ -124,7 +124,7 @@ export default function ImageRecords() {
                       <div className="flex gap-2">
                         {img.job?.id ? (
                           <>
-                            <a 
+                            <a
                               href={`http://localhost:4000/jobs/${img.job.id}/download/thumbnail`}
                               target="_blank"
                               rel="noreferrer"
@@ -132,7 +132,7 @@ export default function ImageRecords() {
                             >
                               Thumbnail
                             </a>
-                            <a 
+                            <a
                               href={`http://localhost:4000/jobs/${img.job.id}/download/compressed`}
                               target="_blank"
                               rel="noreferrer"
@@ -161,7 +161,7 @@ export default function ImageRecords() {
               <span className="text-white font-medium">{Math.min(meta.page * meta.limit, meta.total)}</span> of{' '}
               <span className="text-white font-medium">{meta.total}</span> results
             </span>
-            
+
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}

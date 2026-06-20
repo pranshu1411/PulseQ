@@ -2,6 +2,7 @@ import { WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { PrismaService } from '@app/prisma';
+import { register, Counter } from 'prom-client';
 
 export abstract class BaseProcessor extends WorkerHost {
   protected abstract readonly logger: Logger;
@@ -57,6 +58,11 @@ export abstract class BaseProcessor extends WorkerHost {
           },
         }),
       ]);
+
+      const counter = register.getSingleMetric('pulseq_jobs_completed_total') as Counter<string>;
+      if (counter) {
+        counter.labels(job.queueName).inc();
+      }
     } catch (error) {
       this.logger.error(`Failed to log completion state for job ${job.id}:`, error);
     }
@@ -87,6 +93,13 @@ export abstract class BaseProcessor extends WorkerHost {
           },
         }),
       ]);
+
+      if (isPermanent) {
+        const counter = register.getSingleMetric('pulseq_jobs_failed_total') as Counter<string>;
+        if (counter) {
+          counter.labels(job.queueName).inc();
+        }
+      }
     } catch (dbError) {
       this.logger.error(`Failed to log failure state for job ${job.id}:`, dbError);
     }
