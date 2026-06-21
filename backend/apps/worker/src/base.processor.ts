@@ -46,7 +46,7 @@ export abstract class BaseProcessor extends WorkerHost {
           where: { id: job.id },
           data: {
             status: 'completed',
-            result: result as any,
+            result: result,
             completed_at: new Date(),
           },
         }),
@@ -81,7 +81,7 @@ export abstract class BaseProcessor extends WorkerHost {
           where: { id: job.id },
           data: {
             status: isPermanent ? 'failed' : 'delayed',
-            error: error.message,
+            error: { message: error.message, name: error.name, stack: error.stack },
             attempts: job.attemptsMade,
           },
         }),

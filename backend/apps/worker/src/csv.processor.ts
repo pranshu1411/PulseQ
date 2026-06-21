@@ -1,7 +1,7 @@
 import { Processor } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { CSV_NAME, CsvImportPayload } from '@app/shared';
+import { CSV_NAME, CsvImportPayload, StorageService } from '@app/shared';
 import { PrismaService } from '@app/prisma';
 import { BaseProcessor } from './base.processor';
 import * as fs from 'fs';
@@ -15,7 +15,10 @@ import csvParser from 'csv-parser';
 export class CsvProcessor extends BaseProcessor {
   protected readonly logger = new Logger(CsvProcessor.name);
 
-  constructor(protected readonly prisma: PrismaService) {
+  constructor(
+    protected readonly prisma: PrismaService,
+    private readonly storageService: StorageService,
+  ) {
     super(prisma);
   }
 
@@ -36,19 +39,7 @@ export class CsvProcessor extends BaseProcessor {
 
     const tempFilePath = path.join(originalsDir, `${job.id}.csv`);
 
-    const response = await fetch(fileUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
-    }
-
-    const contentType = response.headers.get('content-type') || '';
-    if (contentType.startsWith('image/') || contentType.startsWith('video/')) {
-      throw new Error(`Invalid file type. The URL points to media (${contentType}), not a CSV.`);
-    }
-
-    if (!response.body) {
-      throw new Error('Response body is empty');
-    }
+    const stream = await this.storageService.getFileStream(fileUrl);
 
     let totalExpectedRows = 0;
     const lineCounter = new Transform({
@@ -63,7 +54,7 @@ export class CsvProcessor extends BaseProcessor {
     const fileStream = fs.createWriteStream(tempFilePath);
 
     // Save remote stream to local file and count lines simultaneously
-    await pipeline(Readable.fromWeb(response.body as any), lineCounter, fileStream);
+    await pipeline(stream, lineCounter, fileStream);
 
     // Account for CSV header row
     totalExpectedRows = Math.max(0, totalExpectedRows - 1);

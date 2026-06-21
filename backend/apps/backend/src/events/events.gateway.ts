@@ -62,6 +62,10 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     }
   }
 
+  public async emitJobFailedToUser(jobId: string, queueName: string, failedReason: string) {
+    await this.emitToUser(jobId, 'jobFailed', { queueName, jobId, failedReason });
+  }
+
   private setupListeners(queueEvents: QueueEvents, queueName: string) {
     queueEvents.on('active', ({ jobId, prev }) => {
       this.emitToUser(jobId, 'jobActive', { queueName, jobId, prev });

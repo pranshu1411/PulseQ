@@ -1,22 +1,92 @@
-import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { Response } from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '@app/prisma';
-import { IMAGE_NAME, ImageProcessingPayload, CSV_NAME, CsvImportPayload, IMAGE_JOB_NAME, CSV_JOB_NAME } from '@app/shared';
+import { IMAGE_NAME, ImageProcessingPayload, CSV_NAME, CsvImportPayload, IMAGE_JOB_NAME, CSV_JOB_NAME, StorageService } from '@app/shared';
 import { InjectMetric } from '@willsoto/nestjs-prometheus';
 import { Counter } from 'prom-client';
+import { EventsGateway } from './events/events.gateway';
 
 @Injectable()
-export class AppService {
+export class AppService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(AppService.name);
+  private staleJobChecker: ReturnType<typeof setInterval> | null = null;
+
+  // Jobs queued for longer than this (ms) without being picked up are marked failed
+  private readonly STALE_JOB_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes
+  private readonly STALE_CHECK_INTERVAL_MS = 30 * 1000; // check every 30s
   constructor(
     @InjectQueue(IMAGE_NAME) private readonly imageQueue: Queue<ImageProcessingPayload>,
     @InjectQueue(CSV_NAME) private readonly csvQueue: Queue<CsvImportPayload>,
     private readonly prisma: PrismaService,
+    private readonly storageService: StorageService,
     @InjectMetric('pulseq_jobs_added_total') private readonly jobsAddedCounter: Counter<string>,
+    private readonly eventsGateway: EventsGateway,
   ) { }
+
+  onModuleInit() {
+    this.staleJobChecker = setInterval(() => this.markStaleJobsAsFailed(), this.STALE_CHECK_INTERVAL_MS);
+    this.logger.log(`Stale job checker started (interval: ${this.STALE_CHECK_INTERVAL_MS / 1000}s, timeout: ${this.STALE_JOB_TIMEOUT_MS / 1000}s)`);
+  }
+
+  onModuleDestroy() {
+    if (this.staleJobChecker) {
+      clearInterval(this.staleJobChecker);
+      this.staleJobChecker = null;
+    }
+  }
+
+  private async markStaleJobsAsFailed() {
+    try {
+      const cutoff = new Date(Date.now() - this.STALE_JOB_TIMEOUT_MS);
+
+      const staleJobs = await this.prisma.job.findMany({
+        where: {
+          status: 'queued',
+          created_at: { lt: cutoff },
+        },
+      });
+
+      for (const job of staleJobs) {
+        // 1. Mark failed in DB
+        const failedReason = 'Job timed out waiting for a worker. No worker picked up this job within the allowed time.';
+        await this.prisma.$transaction([
+          this.prisma.job.update({
+            where: { id: job.id },
+            data: {
+              status: 'failed',
+              error: { message: failedReason },
+            },
+          }),
+          this.prisma.jobLog.create({
+            data: {
+              job_id: job.id,
+              event_type: 'failed',
+              message: `Job timed out after ${this.STALE_JOB_TIMEOUT_MS / 1000}s in queued state — no worker available`,
+            },
+          }),
+        ]);
+
+        // 2. Remove from BullMQ so a worker doesn't process it later
+        const queue = job.queue_name === IMAGE_NAME ? this.imageQueue : this.csvQueue;
+        const bullJob = await queue.getJob(job.id);
+        if (bullJob) {
+          await bullJob.remove();
+        }
+
+        // 3. Notify the frontend
+        await this.eventsGateway.emitJobFailedToUser(job.id, job.queue_name, failedReason);
+
+        this.logger.warn(`Marked stale job ${job.id} (${job.name}) as failed — queued since ${job.created_at.toISOString()}`);
+      }
+    } catch (error) {
+      this.logger.error('Failed to check for stale jobs:', error);
+    }
+  }
 
   async createImageJob(payload: ImageProcessingPayload, userId: string) {
     // 1. Create a job record in Postgres via Prisma
@@ -25,7 +95,7 @@ export class AppService {
         name: payload.jobName || IMAGE_JOB_NAME,
         queue_name: IMAGE_NAME,
         status: 'queued',
-        payload: payload as any,
+        payload: payload as unknown as any, // Cast to any internally if needed, but the interface handles JSON. Actually, let's just cast to any for Prisma to accept it. Oh wait, if payload is not pure JSON, let's pass JSON.parse(JSON.stringify(payload)).
         userId,
       },
     });
@@ -56,7 +126,7 @@ export class AppService {
         where: { id: dbJob.id },
         data: {
           status: 'failed',
-          error: error instanceof Error ? error.message : 'Failed to enqueue Image job',
+          error: error instanceof Error ? { message: error.message, name: error.name, stack: error.stack } : { message: 'Failed to enqueue Image job', raw: error },
         },
       });
       throw new InternalServerErrorException('Failed to enqueue Image job');
@@ -70,7 +140,7 @@ export class AppService {
         name: payload.jobName || CSV_JOB_NAME,
         queue_name: CSV_NAME,
         status: 'queued',
-        payload: payload as any,
+        payload: payload as unknown as any,
         userId,
       },
     });
@@ -101,7 +171,7 @@ export class AppService {
         where: { id: dbJob.id },
         data: {
           status: 'failed',
-          error: error instanceof Error ? error.message : 'Failed to enqueue Csv job',
+          error: error instanceof Error ? { message: error.message, name: error.name, stack: error.stack } : { message: 'Failed to enqueue Csv job', raw: error },
         },
       });
       throw new InternalServerErrorException('Failed to enqueue Csv job');
@@ -111,7 +181,7 @@ export class AppService {
   async getJobById(jobId: string, userId: string) {
     const job = await this.prisma.job.findUnique({
       where: { id: jobId },
-      include: { logs: { orderBy: { created_at: 'asc' } } }
+      include: { logs: { orderBy: { created_at: 'desc' } } },
     });
 
     if (!job || job.userId !== userId) {
@@ -119,6 +189,35 @@ export class AppService {
     }
 
     return job;
+  }
+
+  async getJobLogs(jobId: string, page: number, limit: number, userId: string) {
+    const job = await this.prisma.job.findUnique({ where: { id: jobId } });
+
+    if (!job || job.userId !== userId) {
+      throw new NotFoundException(`Job not found`);
+    }
+
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      this.prisma.jobLog.findMany({
+        where: { job_id: jobId },
+        orderBy: { created_at: 'asc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.jobLog.count({ where: { job_id: jobId } })
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      }
+    };
   }
 
   async retryJob(jobId: string, userId: string) {
@@ -136,15 +235,22 @@ export class AppService {
     const queue = dbJob.queue_name === IMAGE_NAME ? this.imageQueue : this.csvQueue;
 
     // 2. Fetch the job from Redis
-    const bullJob = await queue.getJob(jobId);
+    let bullJob = await queue.getJob(jobId);
 
     if (!bullJob) {
-      throw new NotFoundException(`BullMQ Job ${jobId} not found in Redis. It may have been purged.`);
+      // Job was purged or removed by our stale job checker. Re-enqueue it.
+      bullJob = await queue.add(dbJob.name, dbJob.payload as any, {
+        jobId: dbJob.id,
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 },
+        removeOnComplete: true,
+        removeOnFail: true,
+      });
+    } else {
+      // 3. Trigger BullMQ retry
+      // This moves the job from the 'failed' set back to the 'wait' set
+      await bullJob.retry();
     }
-
-    // 3. Trigger BullMQ retry
-    // This moves the job from the 'failed' set back to the 'wait' set
-    await bullJob.retry();
 
     // 4. Update the DB to reflect the manual intervention
     await this.prisma.$transaction([
@@ -152,7 +258,7 @@ export class AppService {
         where: { id: jobId },
         data: {
           status: 'queued',
-          error: null, // Clear the previous error
+          error: Prisma.DbNull, // Clear the previous error
           updated_at: new Date(), // We update this manually here since it's a specific user action
         },
       }),
@@ -208,7 +314,7 @@ export class AppService {
     return result;
   }
 
-  async downloadJobFile(jobId: string, type: 'thumbnail' | 'compressed', userId: string, res: Response) {
+  async downloadJobFile(jobId: string, type: 'thumbnail' | 'compressed', userId: string) {
     const job = await this.prisma.job.findUnique({ where: { id: jobId } });
 
     if (!job || job.userId !== userId) {
@@ -228,18 +334,15 @@ export class AppService {
       throw new NotFoundException(`Job result not found`);
     }
 
-    const relativePath = type === 'thumbnail' ? result.thumbnailPath : result.compressedPath;
-    if (!relativePath) {
+    const s3Key = type === 'thumbnail' ? result.thumbnailPath : result.compressedPath;
+    if (!s3Key) {
       throw new NotFoundException(`File path not found in job result`);
     }
 
-    const absolutePath = path.join(process.cwd(), relativePath);
+    const stream = await this.storageService.getFileStream(s3Key);
+    const filename = path.basename(s3Key);
 
-    if (!fs.existsSync(absolutePath)) {
-      throw new NotFoundException(`File no longer exists on disk`);
-    }
-
-    res.download(absolutePath);
+    return { stream, filename };
   }
 
   async getProducts(page: number, limit: number, search?: string, userId?: string) {

@@ -1,6 +1,7 @@
 import { Controller, Get, Query, UseGuards, Req } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AppService } from './app.service';
+import type { AuthenticatedRequest } from '@app/shared';
 
 @Controller('images')
 @UseGuards(AuthGuard('jwt'))
@@ -9,7 +10,7 @@ export class ImagesController {
 
   @Get()
   async getImages(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
   ) {

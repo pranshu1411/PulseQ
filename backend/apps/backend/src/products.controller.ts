@@ -1,6 +1,7 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { AppService } from './app.service';
 import { AuthGuard } from '@nestjs/passport';
+import type { AuthenticatedRequest } from '@app/shared';
 
 @Controller('products')
 @UseGuards(AuthGuard('jwt'))
@@ -9,7 +10,7 @@ export class ProductsController {
 
   @Get()
   async getProducts(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
     @Query('search') search?: string,

@@ -1,4 +1,13 @@
 import { IsString, IsUrl, IsArray, IsOptional, IsObject, IsNumber, Min } from 'class-validator';
+import { Request } from 'express';
+
+export interface AuthenticatedRequest extends Request {
+  user: {
+    id: string;
+    email: string;
+  };
+}
+
 
 export const IMAGE_NAME = 'image-processing';
 export const CSV_NAME = 'csv-import';
@@ -35,3 +44,6 @@ export class CsvImportPayload {
   @Min(1)
   batchSize: number;
 }
+
+export * from './storage.service';
+export * from './storage.module';

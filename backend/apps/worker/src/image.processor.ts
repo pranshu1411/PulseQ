@@ -1,20 +1,33 @@
 import { Processor } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { IMAGE_NAME, ImageProcessingPayload } from '@app/shared';
+import { IMAGE_NAME, ImageProcessingPayload, StorageService } from '@app/shared';
 import { PrismaService } from '@app/prisma';
 import { BaseProcessor } from './base.processor';
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import sharp from 'sharp';
+import { Readable } from 'stream';
 
 @Processor(IMAGE_NAME)
 export class ImageProcessor extends BaseProcessor {
   protected readonly logger = new Logger(ImageProcessor.name);
 
-  constructor(protected readonly prisma: PrismaService) {
+  constructor(
+    protected readonly prisma: PrismaService,
+    private readonly storageService: StorageService,
+  ) {
     super(prisma);
+  }
+
+  async streamToBuffer(stream: Readable): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+      stream.on('error', reject);
+      stream.on('end', () => resolve(Buffer.concat(chunks)));
+    });
   }
 
   async process(job: Job<ImageProcessingPayload, any, string>): Promise<any> {
@@ -29,44 +42,30 @@ export class ImageProcessor extends BaseProcessor {
     const userId = dbJob.userId;
 
     const { imageUrl } = job.data;
-    this.logger.log(`Downloading image from: ${imageUrl}`);
+    this.logger.log(`Downloading image from MinIO: ${imageUrl}`);
 
-    const response = await fetch(imageUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
-    }
-
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.startsWith('image/')) {
-      throw new Error(`Invalid content type: expected image/*, got ${contentType}`);
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    const uploadsDir = path.join(process.cwd(), 'apps', 'worker', 'uploads');
-    const thumbnailsDir = path.join(uploadsDir, 'thumbnails');
-    const compressedDir = path.join(uploadsDir, 'compressed');
-
-    await fs.mkdir(thumbnailsDir, { recursive: true });
-    await fs.mkdir(compressedDir, { recursive: true });
+    const stream = await this.storageService.getFileStream(imageUrl);
+    const buffer = await this.streamToBuffer(stream);
 
     const filename = `${job.id}.jpg`;
-    const thumbnailPath = path.join(thumbnailsDir, filename);
-    const compressedPath = path.join(compressedDir, filename);
+    const thumbnailPath = `thumbnails/${filename}`;
+    const compressedPath = `compressed/${filename}`;
 
     const image = sharp(buffer);
     const metadata = await image.metadata();
 
-    await image.clone().resize(150, 150, { fit: 'cover' }).toFile(thumbnailPath);
-    await image.clone().resize({ width: 800, withoutEnlargement: true }).toFile(compressedPath);
+    const thumbnailBuffer = await image.clone().resize(150, 150, { fit: 'cover' }).toBuffer();
+    const compressedBuffer = await image.clone().resize({ width: 800, withoutEnlargement: true }).toBuffer();
+
+    await this.storageService.uploadBuffer(thumbnailBuffer, thumbnailPath, 'image/jpeg');
+    await this.storageService.uploadBuffer(compressedBuffer, compressedPath, 'image/jpeg');
 
     const result = {
       width: metadata.width,
       height: metadata.height,
       format: metadata.format,
-      thumbnailPath: `apps/worker/uploads/thumbnails/${filename}`,
-      compressedPath: `apps/worker/uploads/compressed/${filename}`
+      thumbnailPath,
+      compressedPath
     };
 
     this.logger.log('Saving image record to database...');

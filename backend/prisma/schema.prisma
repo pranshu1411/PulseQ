@@ -44,7 +44,7 @@ model Job {
   max_attempts Int       @default(3)
   payload      Json
   result       Json?
-  error        String?
+  error        Json?
   
   userId       String
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)

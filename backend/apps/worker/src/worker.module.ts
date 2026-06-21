@@ -6,10 +6,11 @@ import { BullModule } from '@nestjs/bullmq';
 import { PrismaModule } from '@app/prisma';
 import { ImageProcessor } from './image.processor';
 import { CsvProcessor } from './csv.processor';
-import { IMAGE_NAME, CSV_NAME } from '@app/shared';
+import { IMAGE_NAME, CSV_NAME, StorageModule } from '@app/shared';
 
 @Module({
   imports: [
+    StorageModule,
     PrometheusModule.register(),
     PrismaModule,
     BullModule.forRoot({

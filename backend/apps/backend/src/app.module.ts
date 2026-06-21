@@ -9,9 +9,11 @@ import { EventsModule } from './events/events.module';
 import { AuthModule } from './auth/auth.module';
 import { ProductsController } from './products.controller';
 import { ImagesController } from './images.controller';
+import { StorageModule } from '@app/shared';
 
 @Module({
   imports: [
+    StorageModule,
     PrometheusModule.register(),
     AuthModule,
     EventsModule,
