@@ -63,6 +63,7 @@ export default function Dashboard() {
                   {ev.type === 'failed' && <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />}
                   {ev.type === 'waiting' && <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]" />}
                   {ev.type === 'progress' && <div className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]" />}
+                  {ev.type === 'delayed' && <div className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-baseline mb-1">
@@ -91,6 +92,9 @@ export default function Dashboard() {
                     <span className="capitalize">{ev.type}</span>
                     {ev.type === 'progress' && ev.data !== undefined && (
                       <span className="text-indigo-400 font-medium">({String(ev.data)}%)</span>
+                    )}
+                    {ev.type === 'delayed' && ev.data !== undefined && (
+                      <span className="text-purple-400 font-medium">({String(ev.data)}ms)</span>
                     )}
                     {ev.type === 'failed' && ev.failedReason && (
                       <span className="text-red-400 font-medium truncate max-w-xs">{ev.failedReason}</span>

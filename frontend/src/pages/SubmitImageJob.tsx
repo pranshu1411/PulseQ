@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 export default function SubmitImageJob() {
   const [jobName, setJobName] = useState('');
   const [priority, setPriority] = useState<number>(5);
+  const [scheduledFor, setScheduledFor] = useState<string>('');
   const [inputType, setInputType] = useState<'url' | 'file'>('url');
   
   const [imageURLs, setImageURLs] = useState<string[]>([]);
@@ -91,7 +92,8 @@ export default function SubmitImageJob() {
           imageUrl: url,
           operations: ['resize', 'compress'],
           metadata: { source: 'dashboard', inputType, isBatch: finalUrls.length > 1 },
-          priority: priority
+          priority: priority,
+          scheduledFor: scheduledFor || undefined
         }, { withCredentials: true })
       ));
       
@@ -128,7 +130,7 @@ export default function SubmitImageJob() {
         </div>
         
         <form onSubmit={submitImageJob} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-medium text-neutral-300 mb-2">Job Name (Optional)</label>
               <input 
@@ -150,6 +152,15 @@ export default function SubmitImageJob() {
                 <option value={5}>Normal Priority</option>
                 <option value={10}>Low Priority (Background Task)</option>
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-300 mb-2">Schedule Start Date & Time</label>
+              <input 
+                type="datetime-local" 
+                value={scheduledFor} 
+                onChange={e => setScheduledFor(e.target.value)} 
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder:text-neutral-600 [color-scheme:dark]" 
+              />
             </div>
           </div>
 

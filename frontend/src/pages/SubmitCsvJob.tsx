@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 export default function SubmitCsvJob() {
   const [jobName, setJobName] = useState('');
   const [priority, setPriority] = useState<number>(5);
+  const [scheduledFor, setScheduledFor] = useState<string>('');
   const [inputType, setInputType] = useState<'url' | 'file'>('url');
   
   const [csvURLs, setCsvURLs] = useState<string[]>([]);
@@ -89,7 +90,8 @@ export default function SubmitCsvJob() {
           jobName: jobName || undefined,
           fileUrl: url,
           batchSize: 10,
-          priority: priority
+          priority: priority,
+          scheduledFor: scheduledFor || undefined
         }, { withCredentials: true })
       ));
       
@@ -126,14 +128,14 @@ export default function SubmitCsvJob() {
         </div>
         
         <form onSubmit={submitCsvJob} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-medium text-neutral-300 mb-2">Job Name (Optional)</label>
               <input 
                 type="text" 
                 value={jobName} 
                 onChange={e => setJobName(e.target.value)} 
-                placeholder="e.g. Monthly Sales Import Batch"
+                placeholder="e.g. Monthly Sales Import"
                 className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all placeholder:text-neutral-600" 
               />
             </div>
@@ -148,6 +150,15 @@ export default function SubmitCsvJob() {
                 <option value={5}>Normal Priority</option>
                 <option value={10}>Low Priority (Background Task)</option>
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-300 mb-2">Schedule Start Date & Time</label>
+              <input 
+                type="datetime-local" 
+                value={scheduledFor} 
+                onChange={e => setScheduledFor(e.target.value)} 
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all placeholder:text-neutral-600 [color-scheme:dark]" 
+              />
             </div>
           </div>
 

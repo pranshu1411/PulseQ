@@ -71,6 +71,10 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
       this.emitToUser(jobId, 'jobActive', { queueName, jobId, prev });
     });
 
+    queueEvents.on('delayed', ({ jobId, delay }) => {
+      this.emitToUser(jobId, 'jobDelayed', { queueName, jobId, delay });
+    });
+
     queueEvents.on('completed', ({ jobId, returnvalue }) => {
       this.emitToUser(jobId, 'jobCompleted', { queueName, jobId, returnvalue });
     });
@@ -83,7 +87,15 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
       this.emitToUser(jobId, 'jobProgress', { queueName, jobId, data });
     });
 
-    queueEvents.on('waiting', ({ jobId }) => {
+    queueEvents.on('waiting', async ({ jobId }) => {
+      try {
+        await this.prisma.job.update({
+          where: { id: jobId },
+          data: { status: 'queued' },
+        });
+      } catch (e) {
+        this.logger.error(`Failed to update status to queued for waiting job ${jobId}`, e);
+      }
       this.emitToUser(jobId, 'jobWaiting', { queueName, jobId });
     });
   }

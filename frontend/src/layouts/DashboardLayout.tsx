@@ -16,7 +16,7 @@ export type JobEvent = {
   queueName: string;
   jobId: string;
   jobName?: string;
-  type: 'active' | 'completed' | 'failed' | 'progress' | 'waiting';
+  type: 'active' | 'completed' | 'failed' | 'progress' | 'waiting' | 'delayed';
   data?: unknown;
   returnvalue?: any;
   failedReason?: string;
@@ -162,6 +162,7 @@ export default function DashboardLayout() {
     newSocket.on('jobFailed', handleEvent('failed'));
     newSocket.on('jobProgress', handleEvent('progress'));
     newSocket.on('jobWaiting', handleEvent('waiting'));
+    newSocket.on('jobDelayed', handleEvent('delayed'));
 
     socketRef.current = newSocket;
 

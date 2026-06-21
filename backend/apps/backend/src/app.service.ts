@@ -173,12 +173,15 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
+    const isDelayed = !!payload.scheduledFor;
+    const delayMs = isDelayed ? Math.max(0, new Date(payload.scheduledFor!).getTime() - Date.now()) : 0;
+
     // 1. Create a job record in Postgres via Prisma
     const dbJob = await this.prisma.job.create({
       data: {
         name: payload.jobName || IMAGE_JOB_NAME,
         queue_name: IMAGE_NAME,
-        status: 'queued',
+        status: isDelayed ? 'delayed' : 'queued',
         priority: payload.priority || 5,
         payload: payload as unknown as any, // Cast to any internally if needed, but the interface handles JSON. Actually, let's just cast to any for Prisma to accept it. Oh wait, if payload is not pure JSON, let's pass JSON.parse(JSON.stringify(payload)).
         userId,
@@ -191,6 +194,7 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
       const bullJob = await this.imageQueue.add(IMAGE_JOB_NAME, payload, {
         jobId: dbJob.id,
         priority: payload.priority || 5,
+        delay: isDelayed && delayMs > 0 ? delayMs : undefined,
         attempts: 3,
         backoff: {
           type: 'exponential',
@@ -253,12 +257,15 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
+    const isDelayed = !!payload.scheduledFor;
+    const delayMs = isDelayed ? Math.max(0, new Date(payload.scheduledFor!).getTime() - Date.now()) : 0;
+
     // 1. Create a job record in Postgres via Prisma
     const dbJob = await this.prisma.job.create({
       data: {
         name: payload.jobName || CSV_JOB_NAME,
         queue_name: CSV_NAME,
-        status: 'queued',
+        status: isDelayed ? 'delayed' : 'queued',
         priority: payload.priority || 5,
         payload: payload as unknown as any,
         userId,
@@ -271,6 +278,7 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
       const bullJob = await this.csvQueue.add(CSV_JOB_NAME, payload, {
         jobId: dbJob.id,
         priority: payload.priority || 5,
+        delay: isDelayed && delayMs > 0 ? delayMs : undefined,
         attempts: 3,
         backoff: {
           type: 'exponential',

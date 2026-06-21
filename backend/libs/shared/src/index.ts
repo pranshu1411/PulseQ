@@ -34,6 +34,10 @@ export class ImageProcessingPayload {
   @IsOptional()
   @IsNumber()
   priority?: number;
+
+  @IsOptional()
+  @IsString()
+  scheduledFor?: string;
 }
 
 export class CsvImportPayload {
@@ -51,6 +55,10 @@ export class CsvImportPayload {
   @IsOptional()
   @IsNumber()
   priority?: number;
+
+  @IsOptional()
+  @IsString()
+  scheduledFor?: string;
 }
 
 export * from './storage.service';
