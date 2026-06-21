@@ -37,18 +37,18 @@ flowchart TD
     classDef queue fill:#ef4444,stroke:#b91c1c,stroke-width:2px,color:#fff
     classDef metrics fill:#ec4899,stroke:#be185d,stroke-width:2px,color:#fff
     
-    UI["💻 React UI (Vite + TS + Framer Motion)"]:::frontend
-    Gateway["🚪 API Gateway (NestJS)"]:::backend
-    SocketIO["📡 WebSocket Server (Socket.IO)"]:::backend
+    UI["React UI (Vite + TS + Framer Motion)"]:::frontend
+    Gateway["API Gateway (NestJS)"]:::backend
+    SocketIO["WebSocket Server (Socket.IO)"]:::backend
     
-    Queue["⚡ Redis / BullMQ"]:::queue
-    Worker["👷 Worker Nodes (NestJS)"]:::worker
+    Queue["Redis / BullMQ"]:::queue
+    Worker["Worker Nodes (NestJS)"]:::worker
     
-    DB["🗄️ PostgreSQL (Prisma ORM)"]:::storage
-    MinIO["📦 MinIO (S3 Storage)"]:::storage
+    DB["PostgreSQL (Prisma ORM)"]:::storage
+    MinIO["MinIO (S3 Storage)"]:::storage
     
-    Prometheus["📈 Prometheus"]:::metrics
-    Grafana["📊 Grafana"]:::metrics
+    Prometheus["Prometheus"]:::metrics
+    Grafana["Grafana"]:::metrics
     
     UI -- "REST Requests" --> Gateway
     UI <== "Live Job Updates" ==> SocketIO
