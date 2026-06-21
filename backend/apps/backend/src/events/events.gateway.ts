@@ -18,7 +18,13 @@ import { PrismaService } from '@app/prisma';
     credentials: true,
   },
 })
-export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect, OnModuleDestroy {
+export class EventsGateway
+  implements
+    OnGatewayInit,
+    OnGatewayConnection,
+    OnGatewayDisconnect,
+    OnModuleDestroy
+{
   @WebSocketServer() server: Server;
   private readonly logger = new Logger(EventsGateway.name);
 
@@ -32,7 +38,7 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
   afterInit(server: Server) {
     this.logger.log('WebSocket Gateway initialized');
-    
+
     const connection = {
       host: process.env.REDIS_HOST || '127.0.0.1',
       port: 6379,
@@ -52,18 +58,34 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
         select: { userId: true, name: true, priority: true },
       });
       if (job) {
-        this.logger.log(`Emitting ${eventName} to user:${job.userId} for job ${jobId}`);
-        this.server.to(`user:${job.userId}`).emit(eventName, { ...data, jobName: job.name, priority: job.priority });
+        this.logger.log(
+          `Emitting ${eventName} to user:${job.userId} for job ${jobId}`,
+        );
+        this.server.to(`user:${job.userId}`).emit(eventName, {
+          ...data,
+          jobName: job.name,
+          priority: job.priority,
+        });
       } else {
-        this.logger.warn(`Job ${jobId} not found in DB, cannot emit ${eventName}`);
+        this.logger.warn(
+          `Job ${jobId} not found in DB, cannot emit ${eventName}`,
+        );
       }
     } catch (e) {
       this.logger.error(`Error emitting to user for job ${jobId}:`, e.message);
     }
   }
 
-  public async emitJobFailedToUser(jobId: string, queueName: string, failedReason: string) {
-    await this.emitToUser(jobId, 'jobFailed', { queueName, jobId, failedReason });
+  public async emitJobFailedToUser(
+    jobId: string,
+    queueName: string,
+    failedReason: string,
+  ) {
+    await this.emitToUser(jobId, 'jobFailed', {
+      queueName,
+      jobId,
+      failedReason,
+    });
   }
 
   private setupListeners(queueEvents: QueueEvents, queueName: string) {
@@ -94,7 +116,10 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
           data: { status: 'queued' },
         });
       } catch (e) {
-        this.logger.error(`Failed to update status to queued for waiting job ${jobId}`, e);
+        this.logger.error(
+          `Failed to update status to queued for waiting job ${jobId}`,
+          e,
+        );
       }
       this.emitToUser(jobId, 'jobWaiting', { queueName, jobId });
     });
@@ -104,10 +129,13 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     try {
       const cookies = client.handshake.headers.cookie;
       if (!cookies) throw new Error('No cookies found');
-      
-      const token = cookies.split(';').find(c => c.trim().startsWith('Authentication='))?.split('=')[1];
+
+      const token = cookies
+        .split(';')
+        .find((c) => c.trim().startsWith('Authentication='))
+        ?.split('=')[1];
       if (!token) throw new Error('Authentication cookie not found');
-      
+
       const payload = this.jwtService.verify(token);
       const userId = payload.sub;
       client.join(`user:${userId}`);

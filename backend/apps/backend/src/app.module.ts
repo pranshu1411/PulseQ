@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
-import { PrometheusModule, makeCounterProvider } from '@willsoto/nestjs-prometheus';
+import {
+  PrometheusModule,
+  makeCounterProvider,
+} from '@willsoto/nestjs-prometheus';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { BullModule } from '@nestjs/bullmq';
@@ -15,10 +18,12 @@ import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
-    ThrottlerModule.forRoot([{
-      ttl: 60000,
-      limit: 20,
-    }]),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 20,
+      },
+    ]),
     StorageModule,
     PrometheusModule.register(),
     AuthModule,
@@ -30,11 +35,14 @@ import { APP_GUARD } from '@nestjs/core';
         port: 6379,
       },
     }),
-    BullModule.registerQueue({
-      name: IMAGE_NAME,
-    }, {
-      name: CSV_NAME
-    }),
+    BullModule.registerQueue(
+      {
+        name: IMAGE_NAME,
+      },
+      {
+        name: CSV_NAME,
+      },
+    ),
   ],
   controllers: [AppController, ProductsController, ImagesController],
   providers: [
@@ -50,4 +58,4 @@ import { APP_GUARD } from '@nestjs/core';
     }),
   ],
 })
-export class AppModule { }
+export class AppModule {}

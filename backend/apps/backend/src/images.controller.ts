@@ -6,7 +6,7 @@ import type { AuthenticatedRequest } from '@app/shared';
 @Controller('images')
 @UseGuards(AuthGuard('jwt'))
 export class ImagesController {
-  constructor(private readonly appService: AppService) { }
+  constructor(private readonly appService: AppService) {}
 
   @Get()
   async getImages(

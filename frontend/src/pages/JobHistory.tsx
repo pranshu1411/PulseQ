@@ -2,6 +2,7 @@ import { useEffect, useState, Fragment } from 'react';
 import axios from 'axios';
 import { History, Activity, CheckCircle2, XCircle, Clock, Loader2, Download, ChevronLeft, ChevronRight, RotateCcw, Trash2 } from 'lucide-react';
 import JobHistoryModal from '../components/JobHistoryModal';
+import { motion } from 'framer-motion';
 
 type Job = {
   id: string;
@@ -110,7 +111,12 @@ export default function JobHistory() {
 
   return (
     <>
-      <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl flex flex-col">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl flex flex-col"
+      >
         <div className="px-6 py-4 border-b border-neutral-800 bg-neutral-900/80 flex items-center justify-between">
           <div className="flex items-center">
             <div className="p-2 bg-neutral-800/50 rounded-lg border border-neutral-700/50 mr-3">
@@ -250,7 +256,7 @@ export default function JobHistory() {
             </div>
           </div>
         )}
-      </div>
+      </motion.div>
 
       {selectedJobId && (
         <JobHistoryModal 

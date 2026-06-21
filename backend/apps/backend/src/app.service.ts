@@ -1,4 +1,14 @@
-import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException, Logger, OnModuleInit, OnModuleDestroy, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Response } from 'express';
 import * as path from 'path';
@@ -7,7 +17,15 @@ import * as crypto from 'crypto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '@app/prisma';
-import { IMAGE_NAME, ImageProcessingPayload, CSV_NAME, CsvImportPayload, IMAGE_JOB_NAME, CSV_JOB_NAME, StorageService } from '@app/shared';
+import {
+  IMAGE_NAME,
+  ImageProcessingPayload,
+  CSV_NAME,
+  CsvImportPayload,
+  IMAGE_JOB_NAME,
+  CSV_JOB_NAME,
+  StorageService,
+} from '@app/shared';
 import { InjectMetric } from '@willsoto/nestjs-prometheus';
 import { Counter } from 'prom-client';
 import { EventsGateway } from './events/events.gateway';
@@ -21,17 +39,24 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
   private readonly STALE_JOB_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes
   private readonly STALE_CHECK_INTERVAL_MS = 30 * 1000; // check every 30s
   constructor(
-    @InjectQueue(IMAGE_NAME) private readonly imageQueue: Queue<ImageProcessingPayload>,
+    @InjectQueue(IMAGE_NAME)
+    private readonly imageQueue: Queue<ImageProcessingPayload>,
     @InjectQueue(CSV_NAME) private readonly csvQueue: Queue<CsvImportPayload>,
     private readonly prisma: PrismaService,
     private readonly storageService: StorageService,
-    @InjectMetric('pulseq_jobs_added_total') private readonly jobsAddedCounter: Counter<string>,
+    @InjectMetric('pulseq_jobs_added_total')
+    private readonly jobsAddedCounter: Counter<string>,
     private readonly eventsGateway: EventsGateway,
-  ) { }
+  ) {}
 
   onModuleInit() {
-    this.staleJobChecker = setInterval(() => this.markStaleJobsAsFailed(), this.STALE_CHECK_INTERVAL_MS);
-    this.logger.log(`Stale job checker started (interval: ${this.STALE_CHECK_INTERVAL_MS / 1000}s, timeout: ${this.STALE_JOB_TIMEOUT_MS / 1000}s)`);
+    this.staleJobChecker = setInterval(
+      () => this.markStaleJobsAsFailed(),
+      this.STALE_CHECK_INTERVAL_MS,
+    );
+    this.logger.log(
+      `Stale job checker started (interval: ${this.STALE_CHECK_INTERVAL_MS / 1000}s, timeout: ${this.STALE_JOB_TIMEOUT_MS / 1000}s)`,
+    );
   }
 
   onModuleDestroy() {
@@ -42,11 +67,16 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
   }
 
   private generateDedupHash(payload: any): string {
-    const sortedPayload = Object.keys(payload).sort().reduce((acc, key) => {
-      acc[key] = payload[key];
-      return acc;
-    }, {} as any);
-    return crypto.createHash('sha256').update(JSON.stringify(sortedPayload)).digest('hex');
+    const sortedPayload = Object.keys(payload)
+      .sort()
+      .reduce((acc, key) => {
+        acc[key] = payload[key];
+        return acc;
+      }, {} as any);
+    return crypto
+      .createHash('sha256')
+      .update(JSON.stringify(sortedPayload))
+      .digest('hex');
   }
 
   private async markStaleJobsAsFailed() {
@@ -62,7 +92,8 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
       });
 
       for (const job of staleJobs) {
-        const failedReason = 'Job timed out waiting for a worker. No worker picked up this job within the allowed time.';
+        const failedReason =
+          'Job timed out waiting for a worker. No worker picked up this job within the allowed time.';
         await this.prisma.$transaction([
           this.prisma.job.update({
             where: { id: job.id },
@@ -80,34 +111,48 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
           }),
         ]);
 
-        const queue = job.queue_name === IMAGE_NAME ? this.imageQueue : this.csvQueue;
+        const queue =
+          job.queue_name === IMAGE_NAME ? this.imageQueue : this.csvQueue;
         const bullJob = await queue.getJob(job.id);
         if (bullJob) {
           await bullJob.remove();
         }
 
-        await this.eventsGateway.emitJobFailedToUser(job.id, job.queue_name, failedReason);
-        this.logger.warn(`Marked stale job ${job.id} (${job.name}) as failed — queued since ${job.created_at.toISOString()}`);
+        await this.eventsGateway.emitJobFailedToUser(
+          job.id,
+          job.queue_name,
+          failedReason,
+        );
+        this.logger.warn(
+          `Marked stale job ${job.id} (${job.name}) as failed — queued since ${job.created_at.toISOString()}`,
+        );
       }
 
       // 2. Reconcile active jobs that might have been interrupted during worker shutdown
       const activeJobs = await this.prisma.job.findMany({
         where: {
           status: 'active',
-          updated_at: { lt: new Date(Date.now() - 60000) } // Hasn't been updated in 1 minute
+          updated_at: { lt: new Date(Date.now() - 60000) }, // Hasn't been updated in 1 minute
         },
       });
 
       for (const job of activeJobs) {
-        const queue = job.queue_name === IMAGE_NAME ? this.imageQueue : this.csvQueue;
+        const queue =
+          job.queue_name === IMAGE_NAME ? this.imageQueue : this.csvQueue;
         const bullJob = await queue.getJob(job.id);
-        
+
         if (!bullJob) {
-          // Job is missing from BullMQ. Since removeOnComplete/removeOnFail deleted it, 
+          // Job is missing from BullMQ. Since removeOnComplete/removeOnFail deleted it,
           // or it was lost, we mark it as failed to prevent it from being stuck forever.
           await this.prisma.job.update({
             where: { id: job.id },
-            data: { status: 'failed', error: { message: 'Job was lost or worker shut down unexpectedly without saving status' } },
+            data: {
+              status: 'failed',
+              error: {
+                message:
+                  'Job was lost or worker shut down unexpectedly without saving status',
+              },
+            },
           });
           this.logger.log(`Reconciled missing active job ${job.id} to failed`);
           continue;
@@ -131,7 +176,9 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
             where: { id: job.id },
             data: { status: 'queued' },
           });
-          this.logger.log(`Reconciled stuck active job ${job.id} back to queued`);
+          this.logger.log(
+            `Reconciled stuck active job ${job.id} back to queued`,
+          );
         }
       }
     } catch (error) {
@@ -149,10 +196,14 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
     });
 
     const payloadHash = this.generateDedupHash(payload);
-    const duplicate = recentJobs.find(j => this.generateDedupHash(j.payload) === payloadHash);
+    const duplicate = recentJobs.find(
+      (j) => this.generateDedupHash(j.payload) === payloadHash,
+    );
 
     if (duplicate) {
-      this.logger.log(`Skipped duplicate Image Job request. Returning existing Job ID: ${duplicate.id}`);
+      this.logger.log(
+        `Skipped duplicate Image Job request. Returning existing Job ID: ${duplicate.id}`,
+      );
       return {
         message: 'A duplicate Image Job is already queued or processing.',
         jobId: duplicate.id,
@@ -169,12 +220,14 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
     if (concurrentJobsCount >= 10) {
       throw new HttpException(
         'You have reached the maximum of 10 concurrent jobs. Please wait for them to finish before submitting more.',
-        HttpStatus.TOO_MANY_REQUESTS
+        HttpStatus.TOO_MANY_REQUESTS,
       );
     }
 
     const isDelayed = !!payload.scheduledFor;
-    const delayMs = isDelayed ? Math.max(0, new Date(payload.scheduledFor!).getTime() - Date.now()) : 0;
+    const delayMs = isDelayed
+      ? Math.max(0, new Date(payload.scheduledFor!).getTime() - Date.now())
+      : 0;
 
     // 1. Create a job record in Postgres via Prisma
     const dbJob = await this.prisma.job.create({
@@ -216,7 +269,10 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
         where: { id: dbJob.id },
         data: {
           status: 'failed',
-          error: error instanceof Error ? { message: error.message, name: error.name, stack: error.stack } : { message: 'Failed to enqueue Image job', raw: error },
+          error:
+            error instanceof Error
+              ? { message: error.message, name: error.name, stack: error.stack }
+              : { message: 'Failed to enqueue Image job', raw: error },
         },
       });
       throw new InternalServerErrorException('Failed to enqueue Image job');
@@ -233,10 +289,14 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
     });
 
     const payloadHash = this.generateDedupHash(payload);
-    const duplicate = recentJobs.find(j => this.generateDedupHash(j.payload) === payloadHash);
+    const duplicate = recentJobs.find(
+      (j) => this.generateDedupHash(j.payload) === payloadHash,
+    );
 
     if (duplicate) {
-      this.logger.log(`Skipped duplicate CSV Job request. Returning existing Job ID: ${duplicate.id}`);
+      this.logger.log(
+        `Skipped duplicate CSV Job request. Returning existing Job ID: ${duplicate.id}`,
+      );
       return {
         message: 'A duplicate Csv Job is already queued or processing.',
         jobId: duplicate.id,
@@ -253,12 +313,14 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
     if (concurrentJobsCount >= 10) {
       throw new HttpException(
         'You have reached the maximum of 10 concurrent jobs. Please wait for them to finish before submitting more.',
-        HttpStatus.TOO_MANY_REQUESTS
+        HttpStatus.TOO_MANY_REQUESTS,
       );
     }
 
     const isDelayed = !!payload.scheduledFor;
-    const delayMs = isDelayed ? Math.max(0, new Date(payload.scheduledFor!).getTime() - Date.now()) : 0;
+    const delayMs = isDelayed
+      ? Math.max(0, new Date(payload.scheduledFor!).getTime() - Date.now())
+      : 0;
 
     // 1. Create a job record in Postgres via Prisma
     const dbJob = await this.prisma.job.create({
@@ -300,7 +362,10 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
         where: { id: dbJob.id },
         data: {
           status: 'failed',
-          error: error instanceof Error ? { message: error.message, name: error.name, stack: error.stack } : { message: 'Failed to enqueue Csv job', raw: error },
+          error:
+            error instanceof Error
+              ? { message: error.message, name: error.name, stack: error.stack }
+              : { message: 'Failed to enqueue Csv job', raw: error },
         },
       });
       throw new InternalServerErrorException('Failed to enqueue Csv job');
@@ -335,7 +400,7 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
         skip,
         take: limit,
       }),
-      this.prisma.jobLog.count({ where: { job_id: jobId } })
+      this.prisma.jobLog.count({ where: { job_id: jobId } }),
     ]);
 
     return {
@@ -345,7 +410,7 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
-      }
+      },
     };
   }
 
@@ -357,11 +422,14 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
     }
 
     if (dbJob.status !== 'failed') {
-      throw new BadRequestException(`Only failed jobs can be retried. Current status is ${dbJob.status}`);
+      throw new BadRequestException(
+        `Only failed jobs can be retried. Current status is ${dbJob.status}`,
+      );
     }
 
     // 1. Determine which queue this job belongs to
-    const queue = dbJob.queue_name === IMAGE_NAME ? this.imageQueue : this.csvQueue;
+    const queue =
+      dbJob.queue_name === IMAGE_NAME ? this.imageQueue : this.csvQueue;
 
     // 2. Fetch the job from Redis
     let bullJob = await queue.getJob(jobId);
@@ -403,9 +471,14 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
     return { message: `Job ${jobId} has been requeued for processing.` };
   }
 
-  async getAllJobs(page: number, limit: number, status: string | undefined, userId: string) {
+  async getAllJobs(
+    page: number,
+    limit: number,
+    status: string | undefined,
+    userId: string,
+  ) {
     const skip = (page - 1) * limit;
-    
+
     const whereClause: any = { userId };
     if (status) {
       whereClause.status = status;
@@ -443,14 +516,17 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
     for (const stat of stats) {
       if (stat.status === 'active') result.active += stat._count;
       else if (stat.status === 'completed') result.completed += stat._count;
-      else if (stat.status === 'failed' || stat.status === 'purged') result.failed += stat._count;
+      else if (stat.status === 'failed' || stat.status === 'purged')
+        result.failed += stat._count;
       else result.waiting += stat._count;
     }
     return result;
   }
 
   async retryAllFailedJobs(userId: string) {
-    const failedJobs = await this.prisma.job.findMany({ where: { userId, status: 'failed' } });
+    const failedJobs = await this.prisma.job.findMany({
+      where: { userId, status: 'failed' },
+    });
     let count = 0;
     for (const job of failedJobs) {
       try {
@@ -464,11 +540,13 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
   }
 
   async purgeAllFailedJobs(userId: string) {
-    const res = await this.prisma.job.updateMany({ 
+    const res = await this.prisma.job.updateMany({
       where: { userId, status: 'failed' },
-      data: { status: 'purged' }
+      data: { status: 'purged' },
     });
-    return { message: `Successfully purged ${res.count} permanently failed jobs.` };
+    return {
+      message: `Successfully purged ${res.count} permanently failed jobs.`,
+    };
   }
 
   async deleteFailedJob(jobId: string, userId: string) {
@@ -477,7 +555,9 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
       throw new NotFoundException(`Job with ID ${jobId} not found`);
     }
     if (job.status !== 'failed') {
-      throw new BadRequestException(`Only failed jobs can be deleted. Current status is ${job.status}`);
+      throw new BadRequestException(
+        `Only failed jobs can be deleted. Current status is ${job.status}`,
+      );
     }
     await this.prisma.job.update({
       where: { id: jobId },
@@ -486,7 +566,11 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
     return { message: `Job ${jobId} successfully purged.` };
   }
 
-  async downloadJobFile(jobId: string, type: 'thumbnail' | 'compressed', userId: string) {
+  async downloadJobFile(
+    jobId: string,
+    type: 'thumbnail' | 'compressed',
+    userId: string,
+  ) {
     const job = await this.prisma.job.findUnique({ where: { id: jobId } });
 
     if (!job || job.userId !== userId) {
@@ -494,7 +578,9 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
     }
 
     if (job.queue_name !== IMAGE_NAME) {
-      throw new BadRequestException(`Only image jobs produce downloadable files`);
+      throw new BadRequestException(
+        `Only image jobs produce downloadable files`,
+      );
     }
 
     if (job.status !== 'completed') {
@@ -506,7 +592,8 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
       throw new NotFoundException(`Job result not found`);
     }
 
-    const s3Key = type === 'thumbnail' ? result.thumbnailPath : result.compressedPath;
+    const s3Key =
+      type === 'thumbnail' ? result.thumbnailPath : result.compressedPath;
     if (!s3Key) {
       throw new NotFoundException(`File path not found in job result`);
     }
@@ -521,7 +608,7 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
     // 1. Cleanup: delete workers that haven't sent a heartbeat in 24 hours
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     await this.prisma.worker.deleteMany({
-      where: { last_heartbeat: { lt: oneDayAgo } }
+      where: { last_heartbeat: { lt: oneDayAgo } },
     });
 
     // 2. Fetch workers active within the last 2 hours
@@ -529,12 +616,12 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
     const cutoff = new Date(Date.now() - 2 * 60 * 1000); // 2 minutes ago
     const workers = await this.prisma.worker.findMany({
       where: { last_heartbeat: { gte: twoHoursAgo } },
-      orderBy: { last_heartbeat: 'desc' }
+      orderBy: { last_heartbeat: 'desc' },
     });
 
-    return workers.map(w => ({
+    return workers.map((w) => ({
       ...w,
-      status: w.last_heartbeat < cutoff ? 'offline' : w.status
+      status: w.last_heartbeat < cutoff ? 'offline' : w.status,
     }));
   }
 
@@ -542,7 +629,7 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
     // 1. Cleanup metrics older than 24 hours
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     await this.prisma.workerMetric.deleteMany({
-      where: { timestamp: { lt: oneDayAgo } }
+      where: { timestamp: { lt: oneDayAgo } },
     });
 
     // 2. Fetch metrics for the last hour
@@ -550,7 +637,7 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
     const metrics = await this.prisma.workerMetric.findMany({
       where: { timestamp: { gte: oneHourAgo } },
       include: { worker: { select: { hostname: true } } },
-      orderBy: { timestamp: 'asc' }
+      orderBy: { timestamp: 'asc' },
     });
 
     // 3. Group by 30-second buckets for the LineChart
@@ -564,7 +651,8 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
       if (!formatted[iso]) {
         formatted[iso] = { timestamp: iso };
       }
-      formatted[iso][`${m.worker.hostname}_cpu`] = Math.round(m.cpu * 100) / 100;
+      formatted[iso][`${m.worker.hostname}_cpu`] =
+        Math.round(m.cpu * 100) / 100;
       formatted[iso][`${m.worker.hostname}_memory`] = Math.round(m.memory);
     }
 
@@ -577,17 +665,24 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
       where: {
         created_at: { gte: oneHourAgo },
         event_type: { in: ['completed', 'failed'] },
-        job: { userId }
+        job: { userId },
       },
       select: { event_type: true, created_at: true },
-      orderBy: { created_at: 'asc' }
+      orderBy: { created_at: 'asc' },
     });
 
-    const buckets: Record<string, { timestamp: string, completed: number, failed: number }> = {};
+    const buckets: Record<
+      string,
+      { timestamp: string; completed: number; failed: number }
+    > = {};
     for (let i = 0; i <= 60; i++) {
       const d = new Date(oneHourAgo.getTime() + i * 60 * 1000);
       d.setSeconds(0, 0);
-      buckets[d.toISOString()] = { timestamp: d.toISOString(), completed: 0, failed: 0 };
+      buckets[d.toISOString()] = {
+        timestamp: d.toISOString(),
+        completed: 0,
+        failed: 0,
+      };
     }
 
     for (const log of logs) {
@@ -607,7 +702,7 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
       where: { userId, status: 'completed', completed_at: { not: null } },
       include: { logs: true },
       take: 100,
-      orderBy: { completed_at: 'desc' }
+      orderBy: { completed_at: 'desc' },
     });
 
     let totalWaitMs = 0;
@@ -616,25 +711,31 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
     let validProcessCount = 0;
 
     for (const job of recentJobs) {
-      const startedLog = job.logs.find(l => l.event_type === 'active' || l.event_type === 'started');
+      const startedLog = job.logs.find(
+        (l) => l.event_type === 'active' || l.event_type === 'started',
+      );
       const createdTime = job.created_at.getTime();
       const completedTime = job.completed_at!.getTime();
 
       if (startedLog) {
         const startedTime = startedLog.created_at.getTime();
-        totalWaitMs += (startedTime - createdTime);
-        totalProcessMs += (completedTime - startedTime);
+        totalWaitMs += startedTime - createdTime;
+        totalProcessMs += completedTime - startedTime;
         validWaitCount++;
         validProcessCount++;
       } else {
-        totalProcessMs += (completedTime - createdTime);
+        totalProcessMs += completedTime - createdTime;
         validProcessCount++;
       }
     }
 
     return {
-      averageWaitTimeMs: validWaitCount > 0 ? Math.round(totalWaitMs / validWaitCount) : 0,
-      averageProcessingTimeMs: validProcessCount > 0 ? Math.round(totalProcessMs / validProcessCount) : 0
+      averageWaitTimeMs:
+        validWaitCount > 0 ? Math.round(totalWaitMs / validWaitCount) : 0,
+      averageProcessingTimeMs:
+        validProcessCount > 0
+          ? Math.round(totalProcessMs / validProcessCount)
+          : 0,
     };
   }
 
@@ -643,7 +744,7 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
       where: { userId, status: { in: ['failed', 'purged'] } },
       take: 100,
       orderBy: { updated_at: 'desc' },
-      select: { error: true }
+      select: { error: true },
     });
 
     const counts: Record<string, number> = {};
@@ -672,11 +773,16 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
     return {
       retriedJobs,
       totalJobs: jobs.length,
-      retryRate: jobs.length > 0 ? (retriedJobs / jobs.length) : 0
+      retryRate: jobs.length > 0 ? retriedJobs / jobs.length : 0,
     };
   }
 
-  async getProducts(page: number, limit: number, search?: string, userId?: string) {
+  async getProducts(
+    page: number,
+    limit: number,
+    search?: string,
+    userId?: string,
+  ) {
     const skip = (page - 1) * limit;
 
     const whereClause: any = { userId };

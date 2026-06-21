@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Activity, Server, AlertTriangle, RefreshCw, BarChart2, HeartPulse, Clock, Cpu, MemoryStick } from 'lucide-react';
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import axios from 'axios';
+import { motion } from 'framer-motion';
 
 type WorkerNode = {
   id: string;
@@ -41,14 +42,6 @@ export default function Analytics() {
   const [retries, setRetries] = useState<Retries>({ retriedJobs: 0, totalJobs: 0, retryRate: 0 });
   const [workerMetrics, setWorkerMetrics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Generate distinct colors for workers based on hostname to keep lines consistent
-  const getWorkerColor = (hostname: string) => {
-    let hash = 0;
-    for (let i = 0; i < hostname.length; i++) hash = hostname.charCodeAt(i) + ((hash << 5) - hash);
-    const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
-    return '#' + '00000'.substring(0, 6 - c.length) + c;
-  };
 
   const fetchAnalytics = async () => {
     try {
@@ -110,7 +103,12 @@ export default function Analytics() {
     <div className="space-y-6">
       {/* Stat Cards Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6 backdrop-blur-sm relative overflow-hidden group">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6 backdrop-blur-sm relative overflow-hidden group"
+        >
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium text-neutral-400">Avg Queue Wait Time</h3>
@@ -119,9 +117,14 @@ export default function Analytics() {
             </div>
           </div>
           <div className="text-3xl font-bold tracking-tight text-white">{formatMs(latency.averageWaitTimeMs)}</div>
-        </div>
+        </motion.div>
 
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6 backdrop-blur-sm relative overflow-hidden group">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6 backdrop-blur-sm relative overflow-hidden group"
+        >
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium text-neutral-400">Avg Processing Time</h3>
@@ -130,9 +133,14 @@ export default function Analytics() {
             </div>
           </div>
           <div className="text-3xl font-bold tracking-tight text-white">{formatMs(latency.averageProcessingTimeMs)}</div>
-        </div>
+        </motion.div>
 
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6 backdrop-blur-sm relative overflow-hidden group">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+          className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6 backdrop-blur-sm relative overflow-hidden group"
+        >
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium text-neutral-400">Job Retries</h3>
@@ -141,9 +149,14 @@ export default function Analytics() {
             </div>
           </div>
           <div className="text-3xl font-bold tracking-tight text-white">{retries.retriedJobs} <span className="text-sm text-neutral-500 font-normal ml-2">/ {retries.totalJobs} total</span></div>
-        </div>
+        </motion.div>
 
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6 backdrop-blur-sm relative overflow-hidden group">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.4 }}
+          className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6 backdrop-blur-sm relative overflow-hidden group"
+        >
           <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium text-neutral-400">Retry Rate</h3>
@@ -152,12 +165,17 @@ export default function Analytics() {
             </div>
           </div>
           <div className="text-3xl font-bold tracking-tight text-white">{(retries.retryRate * 100).toFixed(1)}%</div>
-        </div>
+        </motion.div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Throughput Chart (takes up 2 columns) */}
-        <div className="lg:col-span-2 bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl flex flex-col">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+          className="lg:col-span-2 bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl flex flex-col"
+        >
           <div className="px-6 py-4 border-b border-neutral-800 bg-neutral-900/80 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <BarChart2 className="w-5 h-5 text-indigo-400" />
@@ -185,16 +203,21 @@ export default function Analytics() {
                   contentStyle={{ backgroundColor: '#171717', borderColor: '#262626', borderRadius: '8px', color: '#e5e5e5' }}
                   itemStyle={{ color: '#e5e5e5' }}
                 />
-                <Legend verticalAlign="top" height={36} />
+                <Legend verticalAlign="top" height={36} iconSize={10} wrapperStyle={{ fontSize: '12px', paddingBottom: '10px' }} />
                 <Area type="monotone" name="Completed" dataKey="completed" stroke="#10b981" fillOpacity={1} fill="url(#colorCompleted)" strokeWidth={2} />
                 <Area type="monotone" name="Failed" dataKey="failed" stroke="#ef4444" fillOpacity={1} fill="url(#colorFailed)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
 
         {/* Worker Node Health */}
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl flex flex-col">
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.6 }}
+          className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl flex flex-col"
+        >
           <div className="px-6 py-4 border-b border-neutral-800 bg-neutral-900/80 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Server className="w-5 h-5 text-indigo-400" />
@@ -231,12 +254,17 @@ export default function Analytics() {
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Worker CPU Utilization */}
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl flex flex-col">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.7 }}
+          className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl flex flex-col"
+        >
           <div className="px-6 py-4 border-b border-neutral-800 bg-neutral-900/80 flex items-center gap-2">
             <Cpu className="w-5 h-5 text-indigo-400" />
             <h2 className="text-lg font-medium text-white">CPU Utilization</h2>
@@ -253,7 +281,7 @@ export default function Analytics() {
                   itemStyle={{ color: '#e5e5e5' }}
                   formatter={(value: number) => [`${value}%`, 'CPU Usage']}
                 />
-                <Legend verticalAlign="top" height={36} />
+                <Legend verticalAlign="top" height={36} iconSize={10} wrapperStyle={{ fontSize: '12px', paddingBottom: '10px' }} />
                 {recentWorkers.map((w, i) => {
                   const colors = ['#818cf8', '#34d399', '#fbbf24', '#f87171', '#a78bfa'];
                   return (
@@ -271,10 +299,15 @@ export default function Analytics() {
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
 
         {/* Worker Memory Usage */}
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl flex flex-col">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.8 }}
+          className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl flex flex-col"
+        >
           <div className="px-6 py-4 border-b border-neutral-800 bg-neutral-900/80 flex items-center gap-2">
             <MemoryStick className="w-5 h-5 text-indigo-400" />
             <h2 className="text-lg font-medium text-white">Memory Usage (MB)</h2>
@@ -291,7 +324,7 @@ export default function Analytics() {
                   itemStyle={{ color: '#e5e5e5' }}
                   formatter={(value: number) => [`${value} MB`, 'Memory']}
                 />
-                <Legend verticalAlign="top" height={36} />
+                <Legend verticalAlign="top" height={36} iconSize={10} wrapperStyle={{ fontSize: '12px', paddingBottom: '10px' }} />
                 {recentWorkers.map((w, i) => {
                   const colors = ['#818cf8', '#34d399', '#fbbf24', '#f87171', '#a78bfa'];
                   return (
@@ -309,11 +342,16 @@ export default function Analytics() {
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Failure Analytics Table */}
-      <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.9 }}
+        className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl"
+      >
         <div className="px-6 py-4 border-b border-neutral-800 bg-neutral-900/80 flex items-center gap-2">
           <AlertTriangle className="w-5 h-5 text-red-400" />
           <h2 className="text-lg font-medium text-white">Failure Analytics (Top Reasons)</h2>
@@ -340,7 +378,7 @@ export default function Analytics() {
             </table>
           )}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

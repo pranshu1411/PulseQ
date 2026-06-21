@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { AlertTriangle, RotateCcw, Trash2, Loader2, DatabaseZap } from 'lucide-react';
+import { AlertTriangle, RotateCcw, Trash2, DatabaseZap, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { useOutletContext } from 'react-router-dom';
 import JobHistoryModal from '../components/JobHistoryModal';
+import { motion } from 'framer-motion';
 
 type Job = {
   id: string;
@@ -84,7 +85,7 @@ export default function DeadLetterQueue() {
       toast.success('Job requeued');
       fetchDLQ();
       refreshEvents();
-    } catch (err) {
+    } catch (_) {
       toast.error('Failed to retry job');
     }
   };
@@ -95,7 +96,7 @@ export default function DeadLetterQueue() {
       toast.success('Job deleted');
       fetchDLQ();
       refreshEvents();
-    } catch (err) {
+    } catch (_) {
       toast.error('Failed to delete job');
     }
   };
@@ -108,7 +109,12 @@ export default function DeadLetterQueue() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="max-w-7xl mx-auto"
+    >
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
           <h2 className="text-xl font-bold text-white flex items-center">
@@ -278,6 +284,6 @@ export default function DeadLetterQueue() {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

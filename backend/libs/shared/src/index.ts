@@ -1,4 +1,12 @@
-import { IsString, IsUrl, IsArray, IsOptional, IsObject, IsNumber, Min } from 'class-validator';
+import {
+  IsString,
+  IsUrl,
+  IsArray,
+  IsOptional,
+  IsObject,
+  IsNumber,
+  Min,
+} from 'class-validator';
 import { Request } from 'express';
 
 export interface AuthenticatedRequest extends Request {
@@ -7,7 +15,6 @@ export interface AuthenticatedRequest extends Request {
     email: string;
   };
 }
-
 
 export const IMAGE_NAME = 'image-processing';
 export const CSV_NAME = 'csv-import';

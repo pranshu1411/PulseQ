@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Camera, Trash2, Save, AlertTriangle } from 'lucide-react';
+import { Mail, Camera, Trash2, Save, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
 
 export default function UserProfile() {
   const { user, checkAuth } = useAuth();
@@ -68,7 +69,12 @@ export default function UserProfile() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="max-w-3xl mx-auto space-y-6"
+    >
       <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 shadow-xl">
         <h2 className="text-xl font-semibold text-white mb-6">Profile Settings</h2>
         <div className="flex items-center gap-16 mb-16">
@@ -198,6 +204,6 @@ export default function UserProfile() {
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Image as ImageIcon, Link as LinkIcon, UploadCloud, X, Plus } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
 
 export default function SubmitImageJob() {
   const [jobName, setJobName] = useState('');
@@ -117,7 +118,12 @@ export default function SubmitImageJob() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="max-w-2xl mx-auto"
+    >
       <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-8">
         <div className="flex flex-col items-center text-center mb-8">
           <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-4">
@@ -285,6 +291,6 @@ export default function SubmitImageJob() {
           </button>
         </form>
       </div>
-    </div>
+    </motion.div>
   );
 }

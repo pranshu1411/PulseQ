@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { PrismaService } from '@app/prisma';
 import * as os from 'os';
 
@@ -9,7 +14,7 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private lastCpus: os.CpuInfo[] | null = null;
 
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async onModuleInit() {
     this.logger.log('Initializing worker heartbeat...');
@@ -41,7 +46,9 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
             const prevCpu = this.lastCpus[i];
 
             for (const type in cpu.times) {
-              totalTick += cpu.times[type as keyof typeof cpu.times] - prevCpu.times[type as keyof typeof cpu.times];
+              totalTick +=
+                cpu.times[type as keyof typeof cpu.times] -
+                prevCpu.times[type as keyof typeof cpu.times];
             }
             totalIdle += cpu.times.idle - prevCpu.times.idle;
           }
@@ -52,9 +59,12 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
         } else {
           // On first tick, we don't have a delta, so we use loadavg if available (non-Windows) or default to 0
           const load = os.loadavg()[0];
-          cpuUsage = os.platform() === 'win32' ? 0 : Math.min((load / currentCpus.length) * 100, 100);
+          cpuUsage =
+            os.platform() === 'win32'
+              ? 0
+              : Math.min((load / currentCpus.length) * 100, 100);
         }
-        
+
         this.lastCpus = currentCpus;
         const memoryUsage = process.memoryUsage().rss / 1024 / 1024; // in MB
 
@@ -71,9 +81,13 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
             },
           }),
         ]);
-        this.logger.debug(`Heartbeat & metrics sent for worker ${this.workerId}`);
+        this.logger.debug(
+          `Heartbeat & metrics sent for worker ${this.workerId}`,
+        );
       } catch (error) {
-        this.logger.error(`Failed to send heartbeat: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        this.logger.error(
+          `Failed to send heartbeat: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
       }
     }, 30000);
   }
@@ -93,7 +107,9 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
         });
         this.logger.log(`Worker ${this.workerId} marked as offline`);
       } catch (error) {
-        this.logger.error(`Failed to mark worker offline: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        this.logger.error(
+          `Failed to mark worker offline: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
       }
     }
   }

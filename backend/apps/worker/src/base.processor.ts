@@ -59,12 +59,17 @@ export abstract class BaseProcessor extends WorkerHost {
         }),
       ]);
 
-      const counter = register.getSingleMetric('pulseq_jobs_completed_total') as Counter<string>;
+      const counter = register.getSingleMetric(
+        'pulseq_jobs_completed_total',
+      ) as Counter<string>;
       if (counter) {
         counter.labels(job.queueName).inc();
       }
     } catch (error) {
-      this.logger.error(`Failed to log completion state for job ${job.id}:`, error);
+      this.logger.error(
+        `Failed to log completion state for job ${job.id}:`,
+        error,
+      );
     }
   }
 
@@ -81,7 +86,11 @@ export abstract class BaseProcessor extends WorkerHost {
           where: { id: job.id },
           data: {
             status: isPermanent ? 'failed' : 'delayed',
-            error: { message: error.message, name: error.name, stack: error.stack },
+            error: {
+              message: error.message,
+              name: error.name,
+              stack: error.stack,
+            },
             attempts: job.attemptsMade,
           },
         }),
@@ -95,13 +104,18 @@ export abstract class BaseProcessor extends WorkerHost {
       ]);
 
       if (isPermanent) {
-        const counter = register.getSingleMetric('pulseq_jobs_failed_total') as Counter<string>;
+        const counter = register.getSingleMetric(
+          'pulseq_jobs_failed_total',
+        ) as Counter<string>;
         if (counter) {
           counter.labels(job.queueName).inc();
         }
       }
     } catch (dbError) {
-      this.logger.error(`Failed to log failure state for job ${job.id}:`, dbError);
+      this.logger.error(
+        `Failed to log failure state for job ${job.id}:`,
+        dbError,
+      );
     }
   }
 }

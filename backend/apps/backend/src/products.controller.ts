@@ -15,6 +15,11 @@ export class ProductsController {
     @Query('limit') limit: string = '10',
     @Query('search') search?: string,
   ) {
-    return this.appService.getProducts(Number(page), Number(limit), search, req.user.id);
+    return this.appService.getProducts(
+      Number(page),
+      Number(limit),
+      search,
+      req.user.id,
+    );
   }
 }

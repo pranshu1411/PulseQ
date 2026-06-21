@@ -32,7 +32,6 @@ export default function DashboardLayout() {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isAssignJobsOpen, setIsAssignJobsOpen] = useState(false);
   const [isDataOpen, setIsDataOpen] = useState(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const { user, checkAuth } = useAuth();
   const location = useLocation();
@@ -363,7 +362,7 @@ export default function DashboardLayout() {
             {isSidebarOpen && <span>Home</span>}
           </Link>
           <button
-            onClick={() => setShowLogoutConfirm(true)}
+            onClick={handleLogout}
             title="Logout"
             className={cn("w-full flex items-center py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors", isSidebarOpen ? "px-3" : "justify-center")}
           >

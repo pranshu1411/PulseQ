@@ -1,21 +1,23 @@
 import { Processor } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { IMAGE_NAME, ImageProcessingPayload, StorageService } from '@app/shared';
+import {
+  IMAGE_NAME,
+  ImageProcessingPayload,
+  StorageService,
+} from '@app/shared';
 import { PrismaService } from '@app/prisma';
 import { BaseProcessor } from './base.processor';
 
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import sharp from 'sharp';
 import { Readable } from 'stream';
 
-@Processor(IMAGE_NAME, { 
+@Processor(IMAGE_NAME, {
   concurrency: 5,
   limiter: {
     max: 100,
     duration: 60000,
-  }
+  },
 })
 export class ImageProcessor extends BaseProcessor {
   protected readonly logger = new Logger(ImageProcessor.name);
@@ -60,18 +62,32 @@ export class ImageProcessor extends BaseProcessor {
     const image = sharp(buffer);
     const metadata = await image.metadata();
 
-    const thumbnailBuffer = await image.clone().resize(150, 150, { fit: 'cover' }).toBuffer();
-    const compressedBuffer = await image.clone().resize({ width: 800, withoutEnlargement: true }).toBuffer();
+    const thumbnailBuffer = await image
+      .clone()
+      .resize(150, 150, { fit: 'cover' })
+      .toBuffer();
+    const compressedBuffer = await image
+      .clone()
+      .resize({ width: 800, withoutEnlargement: true })
+      .toBuffer();
 
-    await this.storageService.uploadBuffer(thumbnailBuffer, thumbnailPath, 'image/jpeg');
-    await this.storageService.uploadBuffer(compressedBuffer, compressedPath, 'image/jpeg');
+    await this.storageService.uploadBuffer(
+      thumbnailBuffer,
+      thumbnailPath,
+      'image/jpeg',
+    );
+    await this.storageService.uploadBuffer(
+      compressedBuffer,
+      compressedPath,
+      'image/jpeg',
+    );
 
     const result = {
       width: metadata.width,
       height: metadata.height,
       format: metadata.format,
       thumbnailPath,
-      compressedPath
+      compressedPath,
     };
 
     this.logger.log('Saving image record to database...');
@@ -84,8 +100,8 @@ export class ImageProcessor extends BaseProcessor {
         compressedPath: result.compressedPath,
         format: result.format,
         width: result.width,
-        height: result.height
-      }
+        height: result.height,
+      },
     });
 
     // Guarantee DB is updated BEFORE process() returns to prevent shutdown race conditions
@@ -95,7 +111,11 @@ export class ImageProcessor extends BaseProcessor {
         data: { status: 'completed', result: result, completed_at: new Date() },
       }),
       this.prisma.jobLog.create({
-        data: { job_id: job.id, event_type: 'completed', message: 'Job completed successfully' },
+        data: {
+          job_id: job.id,
+          event_type: 'completed',
+          message: 'Job completed successfully',
+        },
       }),
     ]);
 

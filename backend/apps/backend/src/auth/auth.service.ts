@@ -5,9 +5,18 @@ import { AuthProvider } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService, private jwtService: JwtService) {}
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
 
-  async validateOAuthUser(profile: { email: string; name: string; avatarUrl: string; providerId: string; provider: AuthProvider }) {
+  async validateOAuthUser(profile: {
+    email: string;
+    name: string;
+    avatarUrl: string;
+    providerId: string;
+    provider: AuthProvider;
+  }) {
     let user = await this.prisma.user.findUnique({
       where: { providerId: profile.providerId },
     });
@@ -44,7 +53,10 @@ export class AuthService {
     };
   }
 
-  async updateUser(userId: string, data: { name?: string; avatarUrl?: string }) {
+  async updateUser(
+    userId: string,
+    data: { name?: string; avatarUrl?: string },
+  ) {
     const user = await this.prisma.user.update({
       where: { id: userId },
       data,

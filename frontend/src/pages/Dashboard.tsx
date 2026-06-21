@@ -3,6 +3,7 @@ import { Activity, CheckCircle2, Clock, XCircle, Download, Trash2, ChevronLeft, 
 import { useOutletContext } from 'react-router-dom';
 import type { JobEvent } from '../layouts/DashboardLayout';
 import JobHistoryModal from '../components/JobHistoryModal';
+import { motion } from 'framer-motion';
 
 type DashboardContextType = {
   events: JobEvent[];
@@ -22,13 +23,18 @@ export default function Dashboard() {
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard title="Active Jobs" value={stats.active} icon={<Activity className="text-blue-400" />} />
-        <StatCard title="Completed" value={stats.completed} icon={<CheckCircle2 className="text-emerald-400" />} />
-        <StatCard title="Failed" value={stats.failed} icon={<XCircle className="text-red-400" />} />
-        <StatCard title="Waiting" value={stats.waiting} icon={<Clock className="text-amber-400" />} />
+        <StatCard title="Active Jobs" value={stats.active} icon={<Activity className="text-blue-400" />} index={0} />
+        <StatCard title="Completed" value={stats.completed} icon={<CheckCircle2 className="text-emerald-400" />} index={1} />
+        <StatCard title="Failed" value={stats.failed} icon={<XCircle className="text-red-400" />} index={2} />
+        <StatCard title="Waiting" value={stats.waiting} icon={<Clock className="text-amber-400" />} index={3} />
       </div>
 
-      <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.4 }}
+        className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl"
+      >
         <div className="px-6 py-4 border-b border-neutral-800 bg-neutral-900/80 flex items-center justify-between">
           <h2 className="text-lg font-medium text-white">Live Event Stream</h2>
           <div className="flex items-center gap-3">
@@ -155,7 +161,7 @@ export default function Dashboard() {
             </div>
           </div>
         )}
-      </div>
+      </motion.div>
 
       {selectedJobId && (
         <JobHistoryModal
@@ -167,9 +173,14 @@ export default function Dashboard() {
   );
 }
 
-function StatCard({ title, value, icon }: { title: string; value: number; icon: React.ReactNode }) {
+function StatCard({ title, value, icon, index }: { title: string; value: number; icon: React.ReactNode; index: number }) {
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6 backdrop-blur-sm relative overflow-hidden group">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: index * 0.1 }}
+      className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6 backdrop-blur-sm relative overflow-hidden group"
+    >
       <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-medium text-neutral-400">{title}</h3>
@@ -178,6 +189,6 @@ function StatCard({ title, value, icon }: { title: string; value: number; icon: 
         </div>
       </div>
       <div className="text-3xl font-bold tracking-tight text-white">{value}</div>
-    </div>
+    </motion.div>
   );
 }

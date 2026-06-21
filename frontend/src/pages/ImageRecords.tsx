@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Image as ImageIcon, ChevronLeft, ChevronRight, Loader2, ExternalLink } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 type ImageRecord = {
   id: string;
@@ -51,7 +52,12 @@ export default function ImageRecords() {
   }, [page]);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="max-w-6xl mx-auto space-y-6"
+    >
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -181,6 +187,6 @@ export default function ImageRecords() {
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

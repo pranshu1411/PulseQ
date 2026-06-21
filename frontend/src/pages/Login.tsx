@@ -1,8 +1,8 @@
-import React from 'react';
-import { Activity } from 'lucide-react';
+import { Activity, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
-
+import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
+import { motion } from 'framer-motion';
 
 export default function Login() {
   useEffect(() => {
@@ -15,8 +15,21 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex flex-col justify-center items-center p-4 selection:bg-indigo-500/30">
-      <div className="w-full max-w-md bg-neutral-900/50 border border-neutral-800 rounded-2xl shadow-2xl backdrop-blur-sm p-8">
+    <div className="min-h-screen bg-neutral-950 flex flex-col justify-center items-center p-4 selection:bg-indigo-500/30 relative">
+      <Link
+        to="/"
+        className="absolute top-8 left-8 text-neutral-400 hover:text-white flex items-center transition-colors text-sm font-medium"
+      >
+        <ArrowLeft className="w-4 h-4 mr-2" />
+        Back to Home
+      </Link>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="w-full max-w-md bg-neutral-900/50 border border-neutral-800 rounded-2xl shadow-2xl backdrop-blur-sm p-8"
+      >
         <div className="flex flex-col items-center mb-8">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mb-4 shadow-lg shadow-indigo-500/20">
             <Activity className="w-7 h-7 text-white" />
@@ -51,11 +64,16 @@ export default function Login() {
           </svg>
           Continue with Google
         </button>
-      </div>
+      </motion.div>
 
-      <div className="mt-8 text-neutral-500 text-xs">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, delay: 0.2 }}
+        className="mt-8 text-neutral-500 text-xs"
+      >
         &copy; {new Date().getFullYear()} PulseQ. All rights reserved.
-      </div>
+      </motion.div>
     </div>
   );
 }

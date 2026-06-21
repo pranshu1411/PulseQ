@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
-import { PrometheusModule, makeCounterProvider } from '@willsoto/nestjs-prometheus';
+import {
+  PrometheusModule,
+  makeCounterProvider,
+} from '@willsoto/nestjs-prometheus';
 import { WorkerController } from './worker.controller';
 import { WorkerService } from './worker.service';
 import { BullModule } from '@nestjs/bullmq';
@@ -19,15 +22,12 @@ import { IMAGE_NAME, CSV_NAME, StorageModule } from '@app/shared';
         port: 6379,
       },
     }),
-    BullModule.registerQueue(
-      { name: IMAGE_NAME },
-      { name: CSV_NAME }
-    ),
+    BullModule.registerQueue({ name: IMAGE_NAME }, { name: CSV_NAME }),
   ],
   controllers: [WorkerController],
   providers: [
-    WorkerService, 
-    ImageProcessor, 
+    WorkerService,
+    ImageProcessor,
     CsvProcessor,
     makeCounterProvider({
       name: 'pulseq_jobs_completed_total',
