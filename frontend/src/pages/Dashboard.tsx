@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, CheckCircle2, Clock, XCircle, Download, Trash2 } from 'lucide-react';
+import { Activity, CheckCircle2, Clock, XCircle, Download, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import type { JobEvent } from '../layouts/DashboardLayout';
 import JobHistoryModal from '../components/JobHistoryModal';
@@ -13,6 +13,11 @@ type DashboardContextType = {
 export default function Dashboard() {
   const { events, stats, clearEvents } = useOutletContext<DashboardContextType>();
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
+  const itemsPerPage = 10;
+  const totalPages = Math.max(1, Math.ceil(events.length / itemsPerPage));
+  const paginatedEvents = events.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   return (
     <>
@@ -27,7 +32,7 @@ export default function Dashboard() {
         <div className="px-6 py-4 border-b border-neutral-800 bg-neutral-900/80 flex items-center justify-between">
           <h2 className="text-lg font-medium text-white">Live Event Stream</h2>
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={clearEvents}
               title="Clear all events from the UI (does not delete jobs from the database)"
               className="px-3 py-1.5 rounded-md bg-neutral-800/80 hover:bg-red-500/20 hover:text-red-400 text-neutral-400 text-xs font-medium transition-colors flex items-center gap-1.5 border border-neutral-700/50 hover:border-red-500/30"
@@ -46,9 +51,9 @@ export default function Dashboard() {
               <p>Waiting for queue events...</p>
             </div>
           ) : (
-            events.map((ev, i) => (
-              <div 
-                key={i} 
+            paginatedEvents.map((ev, i) => (
+              <div
+                key={i}
                 className="flex items-center p-4 hover:bg-neutral-800/40 rounded-lg transition-colors group cursor-pointer"
                 onClick={() => setSelectedJobId(ev.jobId)}
               >
@@ -82,7 +87,7 @@ export default function Dashboard() {
                   </div>
                   {ev.queueName === 'image-processing' && ev.type === 'completed' && (
                     <div className="mt-3 flex items-center gap-3">
-                      <a 
+                      <a
                         href={`http://localhost:4000/jobs/${ev.jobId}/download/thumbnail`}
                         target="_blank"
                         rel="noreferrer"
@@ -91,7 +96,7 @@ export default function Dashboard() {
                       >
                         <Download className="w-3.5 h-3.5 mr-1.5" /> Thumbnail
                       </a>
-                      <a 
+                      <a
                         href={`http://localhost:4000/jobs/${ev.jobId}/download/compressed`}
                         target="_blank"
                         rel="noreferrer"
@@ -107,12 +112,40 @@ export default function Dashboard() {
             ))
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {events.length > 0 && totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-neutral-800 bg-neutral-900/80">
+            <span className="text-sm text-neutral-400">
+              Showing <span className="text-white font-medium">{(page - 1) * itemsPerPage + 1}</span> to{' '}
+              <span className="text-white font-medium">{Math.min(page * itemsPerPage, events.length)}</span> of{' '}
+              <span className="text-white font-medium">{events.length}</span> events
+            </span>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-      
+
       {selectedJobId && (
-        <JobHistoryModal 
-          jobId={selectedJobId} 
-          onClose={() => setSelectedJobId(null)} 
+        <JobHistoryModal
+          jobId={selectedJobId}
+          onClose={() => setSelectedJobId(null)}
         />
       )}
     </>
