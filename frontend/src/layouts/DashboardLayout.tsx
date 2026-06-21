@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { Activity, Menu, LayoutDashboard, Image as ImageIcon, FileText, LogOut, Database, History, ChevronDown, PlusCircle } from 'lucide-react';
+import { Activity, Menu, LayoutDashboard, Image as ImageIcon, FileText, LogOut, Database, History, ChevronDown, PlusCircle, BarChart2 } from 'lucide-react';
 import { NavLink, Link, Outlet, useLocation } from 'react-router-dom';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -37,6 +37,7 @@ export default function DashboardLayout() {
 
   const getPageTitle = (pathname: string) => {
     if (pathname === '/') return 'Dashboard';
+    if (pathname === '/analytics') return 'Analytics & Health';
     if (pathname === '/history') return 'Job History';
     if (pathname === '/submit-image') return 'Submit Image Job';
     if (pathname === '/submit-csv') return 'Submit CSV Job';
@@ -197,6 +198,19 @@ export default function DashboardLayout() {
             >
               <History className={cn("w-5 h-5 shrink-0", isSidebarOpen ? "mr-3" : "")} />
               {isSidebarOpen && <span>Job History</span>}
+            </NavLink>
+
+            <NavLink
+              to="/analytics"
+              title="Analytics & Health"
+              className={({ isActive }) => cn(
+                "w-full flex items-center py-2.5 rounded-lg transition-all duration-200 group",
+                isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200",
+                isSidebarOpen ? "px-3" : "justify-center"
+              )}
+            >
+              <BarChart2 className={cn("w-5 h-5 shrink-0", isSidebarOpen ? "mr-3" : "")} />
+              {isSidebarOpen && <span>Analytics</span>}
             </NavLink>
 
             <div className="pt-2">

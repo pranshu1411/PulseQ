@@ -345,6 +345,122 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
     return { stream, filename };
   }
 
+  async getWorkers() {
+    const cutoff = new Date(Date.now() - 2 * 60 * 1000); // 2 minutes ago
+    const workers = await this.prisma.worker.findMany({
+      orderBy: { last_heartbeat: 'desc' }
+    });
+    return workers.map(w => ({
+      ...w,
+      status: w.last_heartbeat < cutoff ? 'offline' : w.status
+    }));
+  }
+
+  async getThroughput(userId: string) {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const logs = await this.prisma.jobLog.findMany({
+      where: {
+        created_at: { gte: oneHourAgo },
+        event_type: { in: ['completed', 'failed'] },
+        job: { userId }
+      },
+      select: { event_type: true, created_at: true },
+      orderBy: { created_at: 'asc' }
+    });
+
+    const buckets: Record<string, { timestamp: string, completed: number, failed: number }> = {};
+    for (let i = 0; i <= 60; i++) {
+      const d = new Date(oneHourAgo.getTime() + i * 60 * 1000);
+      d.setSeconds(0, 0);
+      buckets[d.toISOString()] = { timestamp: d.toISOString(), completed: 0, failed: 0 };
+    }
+
+    for (const log of logs) {
+      const d = new Date(log.created_at);
+      d.setSeconds(0, 0);
+      const iso = d.toISOString();
+      if (buckets[iso]) {
+        if (log.event_type === 'completed') buckets[iso].completed++;
+        else if (log.event_type === 'failed') buckets[iso].failed++;
+      }
+    }
+    return Object.values(buckets);
+  }
+
+  async getLatencyStats(userId: string) {
+    const recentJobs = await this.prisma.job.findMany({
+      where: { userId, status: 'completed', completed_at: { not: null } },
+      include: { logs: true },
+      take: 100,
+      orderBy: { completed_at: 'desc' }
+    });
+
+    let totalWaitMs = 0;
+    let totalProcessMs = 0;
+    let validWaitCount = 0;
+    let validProcessCount = 0;
+
+    for (const job of recentJobs) {
+      const startedLog = job.logs.find(l => l.event_type === 'active' || l.event_type === 'started');
+      const createdTime = job.created_at.getTime();
+      const completedTime = job.completed_at!.getTime();
+
+      if (startedLog) {
+        const startedTime = startedLog.created_at.getTime();
+        totalWaitMs += (startedTime - createdTime);
+        totalProcessMs += (completedTime - startedTime);
+        validWaitCount++;
+        validProcessCount++;
+      } else {
+        totalProcessMs += (completedTime - createdTime);
+        validProcessCount++;
+      }
+    }
+
+    return {
+      averageWaitTimeMs: validWaitCount > 0 ? Math.round(totalWaitMs / validWaitCount) : 0,
+      averageProcessingTimeMs: validProcessCount > 0 ? Math.round(totalProcessMs / validProcessCount) : 0
+    };
+  }
+
+  async getFailureAnalytics(userId: string) {
+    const failedJobs = await this.prisma.job.findMany({
+      where: { userId, status: 'failed' },
+      take: 100,
+      orderBy: { updated_at: 'desc' },
+      select: { error: true }
+    });
+
+    const counts: Record<string, number> = {};
+    for (const job of failedJobs) {
+      const err = job.error as any;
+      const msg = err?.message || 'Unknown error';
+      counts[msg] = (counts[msg] || 0) + 1;
+    }
+
+    return Object.entries(counts)
+      .map(([reason, count]) => ({ reason, count }))
+      .sort((a, b) => b.count - a.count);
+  }
+
+  async getRetryStats(userId: string) {
+    const jobs = await this.prisma.job.findMany({
+      where: { userId },
+      select: { attempts: true },
+    });
+
+    let retriedJobs = 0;
+    for (const job of jobs) {
+      if (job.attempts > 1) retriedJobs++;
+    }
+
+    return {
+      retriedJobs,
+      totalJobs: jobs.length,
+      retryRate: jobs.length > 0 ? (retriedJobs / jobs.length) : 0
+    };
+  }
+
   async getProducts(page: number, limit: number, search?: string, userId?: string) {
     const skip = (page - 1) * limit;
 

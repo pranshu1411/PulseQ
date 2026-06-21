@@ -68,6 +68,31 @@ export class AppController {
     return this.appService.getJobStats(req.user.id);
   }
 
+  @Get('analytics/workers')
+  async getWorkers() {
+    return this.appService.getWorkers();
+  }
+
+  @Get('analytics/throughput')
+  async getThroughput(@Req() req: AuthenticatedRequest) {
+    return this.appService.getThroughput(req.user.id);
+  }
+
+  @Get('analytics/latency')
+  async getLatencyStats(@Req() req: AuthenticatedRequest) {
+    return this.appService.getLatencyStats(req.user.id);
+  }
+
+  @Get('analytics/failures')
+  async getFailureAnalytics(@Req() req: AuthenticatedRequest) {
+    return this.appService.getFailureAnalytics(req.user.id);
+  }
+
+  @Get('analytics/retries')
+  async getRetryStats(@Req() req: AuthenticatedRequest) {
+    return this.appService.getRetryStats(req.user.id);
+  }
+
   @Get(':id')
   async getJobById(@Param('id') jobId: string, @Req() req: AuthenticatedRequest) {
     return this.appService.getJobById(jobId, req.user.id);

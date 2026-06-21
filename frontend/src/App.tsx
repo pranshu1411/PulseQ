@@ -11,6 +11,7 @@ import CsvRecords from './pages/CsvRecords';
 import JobHistory from './pages/JobHistory';
 import ImageRecords from './pages/ImageRecords';
 import UserProfile from './pages/UserProfile';
+import Analytics from './pages/Analytics';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -54,6 +55,7 @@ export default function App() {
             <Route path="image-records" element={<ImageRecords />} />
             <Route path="history" element={<JobHistory />} />
             <Route path="profile" element={<UserProfile />} />
+            <Route path="analytics" element={<Analytics />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
