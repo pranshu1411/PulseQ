@@ -11,7 +11,13 @@ import { Readable, Transform } from 'stream';
 import { pipeline } from 'stream/promises';
 import csvParser from 'csv-parser';
 
-@Processor(CSV_NAME, { concurrency: 5 })
+@Processor(CSV_NAME, { 
+  concurrency: 5,
+  limiter: {
+    max: 10,
+    duration: 60000,
+  }
+})
 export class CsvProcessor extends BaseProcessor {
   protected readonly logger = new Logger(CsvProcessor.name);
 

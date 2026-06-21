@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { Response } from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as crypto from 'crypto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '@app/prisma';
@@ -38,6 +39,14 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
       clearInterval(this.staleJobChecker);
       this.staleJobChecker = null;
     }
+  }
+
+  private generateDedupHash(payload: any): string {
+    const sortedPayload = Object.keys(payload).sort().reduce((acc, key) => {
+      acc[key] = payload[key];
+      return acc;
+    }, {} as any);
+    return crypto.createHash('sha256').update(JSON.stringify(sortedPayload)).digest('hex');
   }
 
   private async markStaleJobsAsFailed() {
@@ -89,6 +98,25 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
   }
 
   async createImageJob(payload: ImageProcessingPayload, userId: string) {
+    const recentJobs = await this.prisma.job.findMany({
+      where: {
+        userId,
+        queue_name: IMAGE_NAME,
+        status: { in: ['queued', 'active'] },
+      },
+    });
+
+    const payloadHash = this.generateDedupHash(payload);
+    const duplicate = recentJobs.find(j => this.generateDedupHash(j.payload) === payloadHash);
+
+    if (duplicate) {
+      this.logger.log(`Skipped duplicate Image Job request. Returning existing Job ID: ${duplicate.id}`);
+      return {
+        message: 'A duplicate Image Job is already queued or processing.',
+        jobId: duplicate.id,
+      };
+    }
+
     // 1. Create a job record in Postgres via Prisma
     const dbJob = await this.prisma.job.create({
       data: {
@@ -134,6 +162,25 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
   }
 
   async createCsvJob(payload: CsvImportPayload, userId: string) {
+    const recentJobs = await this.prisma.job.findMany({
+      where: {
+        userId,
+        queue_name: CSV_NAME,
+        status: { in: ['queued', 'active'] },
+      },
+    });
+
+    const payloadHash = this.generateDedupHash(payload);
+    const duplicate = recentJobs.find(j => this.generateDedupHash(j.payload) === payloadHash);
+
+    if (duplicate) {
+      this.logger.log(`Skipped duplicate CSV Job request. Returning existing Job ID: ${duplicate.id}`);
+      return {
+        message: 'A duplicate Csv Job is already queued or processing.',
+        jobId: duplicate.id,
+      };
+    }
+
     // 1. Create a job record in Postgres via Prisma
     const dbJob = await this.prisma.job.create({
       data: {
@@ -388,7 +435,7 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
       const coeff = 1000 * 30;
       const rounded = new Date(Math.floor(d.getTime() / coeff) * coeff);
       const iso = rounded.toISOString();
-      
+
       if (!formatted[iso]) {
         formatted[iso] = { timestamp: iso };
       }

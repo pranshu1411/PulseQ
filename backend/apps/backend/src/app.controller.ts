@@ -35,8 +35,8 @@ export class AppController {
   async uploadImageJobFiles(@UploadedFiles() files: Array<Express.Multer.File>) {
     const urls = await Promise.all(
       files.map(async (f) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        const filename = `${uniqueSuffix}-${f.originalname.replace(/[^a-zA-Z0-9.]/g, '')}`;
+        const fileHash = require('crypto').createHash('sha256').update(f.buffer).digest('hex').substring(0, 32);
+        const filename = `${fileHash}-${f.originalname.replace(/[^a-zA-Z0-9.]/g, '')}`;
         await this.storageService.uploadBuffer(f.buffer, filename, f.mimetype);
         return filename;
       })
@@ -54,8 +54,8 @@ export class AppController {
   async uploadCsvJobFiles(@UploadedFiles() files: Array<Express.Multer.File>) {
     const urls = await Promise.all(
       files.map(async (f) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        const filename = `${uniqueSuffix}-${f.originalname.replace(/[^a-zA-Z0-9.]/g, '')}`;
+        const fileHash = require('crypto').createHash('sha256').update(f.buffer).digest('hex').substring(0, 32);
+        const filename = `${fileHash}-${f.originalname.replace(/[^a-zA-Z0-9.]/g, '')}`;
         await this.storageService.uploadBuffer(f.buffer, filename, f.mimetype);
         return filename;
       })

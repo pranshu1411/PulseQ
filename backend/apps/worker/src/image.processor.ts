@@ -10,7 +10,13 @@ import * as path from 'path';
 import sharp from 'sharp';
 import { Readable } from 'stream';
 
-@Processor(IMAGE_NAME, { concurrency: 5 })
+@Processor(IMAGE_NAME, { 
+  concurrency: 5,
+  limiter: {
+    max: 100,
+    duration: 60000,
+  }
+})
 export class ImageProcessor extends BaseProcessor {
   protected readonly logger = new Logger(ImageProcessor.name);
 
