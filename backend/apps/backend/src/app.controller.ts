@@ -73,6 +73,11 @@ export class AppController {
     return this.appService.getWorkers();
   }
 
+  @Get('analytics/worker-metrics')
+  async getWorkerMetrics() {
+    return this.appService.getWorkerMetrics();
+  }
+
   @Get('analytics/throughput')
   async getThroughput(@Req() req: AuthenticatedRequest) {
     return this.appService.getThroughput(req.user.id);

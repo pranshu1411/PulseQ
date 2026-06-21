@@ -346,14 +346,57 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
   }
 
   async getWorkers() {
+    // 1. Cleanup: delete workers that haven't sent a heartbeat in 24 hours
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    await this.prisma.worker.deleteMany({
+      where: { last_heartbeat: { lt: oneDayAgo } }
+    });
+
+    // 2. Fetch workers active within the last 2 hours
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
     const cutoff = new Date(Date.now() - 2 * 60 * 1000); // 2 minutes ago
     const workers = await this.prisma.worker.findMany({
+      where: { last_heartbeat: { gte: twoHoursAgo } },
       orderBy: { last_heartbeat: 'desc' }
     });
+
     return workers.map(w => ({
       ...w,
       status: w.last_heartbeat < cutoff ? 'offline' : w.status
     }));
+  }
+
+  async getWorkerMetrics() {
+    // 1. Cleanup metrics older than 24 hours
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    await this.prisma.workerMetric.deleteMany({
+      where: { timestamp: { lt: oneDayAgo } }
+    });
+
+    // 2. Fetch metrics for the last hour
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const metrics = await this.prisma.workerMetric.findMany({
+      where: { timestamp: { gte: oneHourAgo } },
+      include: { worker: { select: { hostname: true } } },
+      orderBy: { timestamp: 'asc' }
+    });
+
+    // 3. Group by 30-second buckets for the LineChart
+    const formatted: Record<string, any> = {};
+    for (const m of metrics) {
+      const d = new Date(m.timestamp);
+      const coeff = 1000 * 30;
+      const rounded = new Date(Math.floor(d.getTime() / coeff) * coeff);
+      const iso = rounded.toISOString();
+      
+      if (!formatted[iso]) {
+        formatted[iso] = { timestamp: iso };
+      }
+      formatted[iso][`${m.worker.hostname}_cpu`] = Math.round(m.cpu * 100) / 100;
+      formatted[iso][`${m.worker.hostname}_memory`] = Math.round(m.memory);
+    }
+
+    return Object.values(formatted);
   }
 
   async getThroughput(userId: string) {

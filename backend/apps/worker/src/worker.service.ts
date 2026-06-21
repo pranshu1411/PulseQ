@@ -28,11 +28,24 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
     this.heartbeatInterval = setInterval(async () => {
       if (!this.workerId) return;
       try {
-        await this.prisma.worker.update({
-          where: { id: this.workerId },
-          data: { last_heartbeat: new Date() },
-        });
-        this.logger.debug(`Heartbeat sent for worker ${this.workerId}`);
+        const cpus = os.cpus();
+        const cpuUsage = Math.min((os.loadavg()[0] / cpus.length) * 100, 100);
+        const memoryUsage = process.memoryUsage().rss / 1024 / 1024; // in MB
+
+        await this.prisma.$transaction([
+          this.prisma.worker.update({
+            where: { id: this.workerId },
+            data: { last_heartbeat: new Date() },
+          }),
+          this.prisma.workerMetric.create({
+            data: {
+              workerId: this.workerId,
+              cpu: cpuUsage,
+              memory: memoryUsage,
+            },
+          }),
+        ]);
+        this.logger.debug(`Heartbeat & metrics sent for worker ${this.workerId}`);
       } catch (error) {
         this.logger.error(`Failed to send heartbeat: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }

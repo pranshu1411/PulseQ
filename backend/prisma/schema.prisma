@@ -67,7 +67,21 @@ model Worker {
   current_jobs   Int      @default(0)
   created_at     DateTime @default(now())
 
+  metrics        WorkerMetric[]
+
   @@map("workers")
+}
+
+model WorkerMetric {
+  id        String   @id @default(uuid())
+  workerId  String
+  cpu       Float
+  memory    Float
+  timestamp DateTime @default(now())
+
+  worker    Worker   @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@map("worker_metrics")
 }
 
 model JobLog {

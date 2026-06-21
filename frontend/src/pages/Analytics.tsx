@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Activity, Server, AlertTriangle, RefreshCw, BarChart2, HeartPulse, Clock } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { Activity, Server, AlertTriangle, RefreshCw, BarChart2, HeartPulse, Clock, Cpu, MemoryStick } from 'lucide-react';
+import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import axios from 'axios';
 
 type WorkerNode = {
@@ -39,7 +39,16 @@ export default function Analytics() {
   const [latency, setLatency] = useState<Latency>({ averageWaitTimeMs: 0, averageProcessingTimeMs: 0 });
   const [failures, setFailures] = useState<Failures[]>([]);
   const [retries, setRetries] = useState<Retries>({ retriedJobs: 0, totalJobs: 0, retryRate: 0 });
+  const [workerMetrics, setWorkerMetrics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Generate distinct colors for workers based on hostname to keep lines consistent
+  const getWorkerColor = (hostname: string) => {
+    let hash = 0;
+    for (let i = 0; i < hostname.length; i++) hash = hostname.charCodeAt(i) + ((hash << 5) - hash);
+    const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+    return '#' + '00000'.substring(0, 6 - c.length) + c;
+  };
 
   const fetchAnalytics = async () => {
     try {
@@ -49,12 +58,13 @@ export default function Analytics() {
         'Expires': '0'
       };
 
-      const [wRes, tRes, lRes, fRes, rRes] = await Promise.all([
+      const [wRes, tRes, lRes, fRes, rRes, wmRes] = await Promise.all([
         axios.get('http://localhost:4000/jobs/analytics/workers', { withCredentials: true, headers }),
         axios.get('http://localhost:4000/jobs/analytics/throughput', { withCredentials: true, headers }),
         axios.get('http://localhost:4000/jobs/analytics/latency', { withCredentials: true, headers }),
         axios.get('http://localhost:4000/jobs/analytics/failures', { withCredentials: true, headers }),
         axios.get('http://localhost:4000/jobs/analytics/retries', { withCredentials: true, headers }),
+        axios.get('http://localhost:4000/jobs/analytics/worker-metrics', { withCredentials: true, headers }),
       ]);
 
       setWorkers(wRes.data);
@@ -62,12 +72,15 @@ export default function Analytics() {
       setLatency(lRes.data);
       setFailures(fRes.data);
       setRetries(rRes.data);
+      setWorkerMetrics(wmRes.data);
     } catch (err) {
       console.error('Failed to fetch analytics', err);
     } finally {
       setLoading(false);
     }
   };
+
+  const recentWorkers = workers.slice(0, 5); // Limit chart lines to top 5 most recent workers to avoid legend overflow
 
   useEffect(() => {
     fetchAnalytics();
@@ -217,6 +230,84 @@ export default function Analytics() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Worker CPU Utilization */}
+        <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl flex flex-col">
+          <div className="px-6 py-4 border-b border-neutral-800 bg-neutral-900/80 flex items-center gap-2">
+            <Cpu className="w-5 h-5 text-indigo-400" />
+            <h2 className="text-lg font-medium text-white">CPU Utilization</h2>
+          </div>
+          <div className="p-6 flex-1 min-h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={workerMetrics} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#262626" vertical={false} />
+                <XAxis dataKey="timestamp" tickFormatter={formatTime} stroke="#525252" fontSize={12} tickMargin={10} />
+                <YAxis stroke="#525252" fontSize={12} tickFormatter={(v) => `${v}%`} />
+                <Tooltip
+                  labelFormatter={(v) => formatTime(v)}
+                  contentStyle={{ backgroundColor: '#171717', borderColor: '#262626', borderRadius: '8px', color: '#e5e5e5' }}
+                  itemStyle={{ color: '#e5e5e5' }}
+                  formatter={(value: number) => [`${value}%`, 'CPU Usage']}
+                />
+                <Legend verticalAlign="top" height={36} />
+                {recentWorkers.map((w, i) => {
+                  const colors = ['#818cf8', '#34d399', '#fbbf24', '#f87171', '#a78bfa'];
+                  return (
+                    <Line
+                      key={w.id}
+                      type="monotone"
+                      dataKey={`${w.hostname}_cpu`}
+                      name={w.hostname}
+                      stroke={colors[i % colors.length]}
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  );
+                })}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Worker Memory Usage */}
+        <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl flex flex-col">
+          <div className="px-6 py-4 border-b border-neutral-800 bg-neutral-900/80 flex items-center gap-2">
+            <MemoryStick className="w-5 h-5 text-indigo-400" />
+            <h2 className="text-lg font-medium text-white">Memory Usage (MB)</h2>
+          </div>
+          <div className="p-6 flex-1 min-h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={workerMetrics} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#262626" vertical={false} />
+                <XAxis dataKey="timestamp" tickFormatter={formatTime} stroke="#525252" fontSize={12} tickMargin={10} />
+                <YAxis stroke="#525252" fontSize={12} tickFormatter={(v) => `${v} MB`} />
+                <Tooltip
+                  labelFormatter={(v) => formatTime(v)}
+                  contentStyle={{ backgroundColor: '#171717', borderColor: '#262626', borderRadius: '8px', color: '#e5e5e5' }}
+                  itemStyle={{ color: '#e5e5e5' }}
+                  formatter={(value: number) => [`${value} MB`, 'Memory']}
+                />
+                <Legend verticalAlign="top" height={36} />
+                {recentWorkers.map((w, i) => {
+                  const colors = ['#818cf8', '#34d399', '#fbbf24', '#f87171', '#a78bfa'];
+                  return (
+                    <Line
+                      key={w.id}
+                      type="monotone"
+                      dataKey={`${w.hostname}_memory`}
+                      name={w.hostname}
+                      stroke={colors[i % colors.length]}
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  );
+                })}
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>
