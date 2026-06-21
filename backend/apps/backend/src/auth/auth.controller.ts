@@ -33,7 +33,7 @@ export class AuthController {
     });
     
     // Redirect back to frontend dashboard
-    res.redirect('http://localhost:5173/');
+    res.redirect('http://localhost:5173/dashboard');
   }
 
   @Get('me')

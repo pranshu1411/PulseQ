@@ -2,7 +2,13 @@ import React from 'react';
 import { Activity } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+import { useEffect } from 'react';
+
 export default function Login() {
+  useEffect(() => {
+    document.title = 'Login | PulseQ';
+  }, []);
+
   const handleGoogleLogin = () => {
     toast.loading('Redirecting to Google...');
     window.location.href = 'http://localhost:4000/auth/google';

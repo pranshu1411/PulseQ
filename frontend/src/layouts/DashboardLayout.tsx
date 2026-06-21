@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { Activity, Menu, LayoutDashboard, Image as ImageIcon, FileText, LogOut, Database, History, ChevronDown, PlusCircle, BarChart2, AlertTriangle } from 'lucide-react';
+import { Activity, Menu, LayoutDashboard, Image as ImageIcon, FileText, LogOut, Database, History, ChevronDown, PlusCircle, BarChart2, AlertTriangle, Home } from 'lucide-react';
 import { NavLink, Link, Outlet, useLocation } from 'react-router-dom';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -31,28 +31,33 @@ export default function DashboardLayout() {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isAssignJobsOpen, setIsAssignJobsOpen] = useState(false);
   const [isDataOpen, setIsDataOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const { user, checkAuth } = useAuth();
   const location = useLocation();
 
   const getPageTitle = (pathname: string) => {
-    if (pathname === '/') return 'Dashboard';
-    if (pathname === '/analytics') return 'Analytics & Health';
-    if (pathname === '/history') return 'Job History';
-    if (pathname === '/submit-image') return 'Submit Image Job';
-    if (pathname === '/submit-csv') return 'Submit CSV Job';
-    if (pathname === '/csv-records') return 'CSV Records';
-    if (pathname === '/image-records') return 'Image Records';
-    if (pathname === '/dlq') return 'Dead-Letter Queue';
-    if (pathname === '/profile') return 'User Profile';
+    if (pathname === '/dashboard') return 'Dashboard';
+    if (pathname === '/dashboard/analytics') return 'Analytics & Health';
+    if (pathname === '/dashboard/history') return 'Job History';
+    if (pathname === '/dashboard/submit-image') return 'Submit Image Job';
+    if (pathname === '/dashboard/submit-csv') return 'Submit CSV Job';
+    if (pathname === '/dashboard/csv-records') return 'CSV Records';
+    if (pathname === '/dashboard/image-records') return 'Image Records';
+    if (pathname === '/dashboard/dlq') return 'Dead-Letter Queue';
+    if (pathname === '/dashboard/profile') return 'User Profile';
     return 'Dashboard';
   };
+
+  useEffect(() => {
+    document.title = `${getPageTitle(location.pathname)} | PulseQ`;
+  }, [location.pathname]);
 
   useEffect(() => {
     const fetchInitialJobs = async () => {
       try {
         const [statsRes, jobsRes] = await Promise.all([
-          axios.get('http://localhost:4000/jobs/stats', { 
+          axios.get('http://localhost:4000/jobs/stats', {
             withCredentials: true,
             headers: {
               'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -111,11 +116,11 @@ export default function DashboardLayout() {
       const failedReason = typeof rawReason === 'object' && rawReason !== null
         ? (rawReason as any).message || JSON.stringify(rawReason)
         : rawReason;
-        
+
       setEvents((prev) => {
         const newEvent = { ...data, type, failedReason, timestamp: Date.now() } as JobEvent;
         console.log(`[handleEvent] type=${type} jobId=${newEvent.jobId} data=${JSON.stringify(data)}`);
-        
+
         if (type === 'progress') {
           const existingIndex = prev.findIndex(e => e.jobId === newEvent.jobId && e.type === 'progress');
           console.log(`[handleEvent] existingIndex=${existingIndex} prevLength=${prev.length}`);
@@ -125,7 +130,7 @@ export default function DashboardLayout() {
             return updated;
           }
         }
-        
+
         return [newEvent, ...prev].slice(0, 100);
       });
 
@@ -138,7 +143,7 @@ export default function DashboardLayout() {
       // Re-fetch stats directly from the backend to ensure perfect accuracy
       // rather than trying to guess the counter increments/decrements.
       try {
-        const statsRes = await axios.get('http://localhost:4000/jobs/stats', { 
+        const statsRes = await axios.get('http://localhost:4000/jobs/stats', {
           withCredentials: true,
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -192,7 +197,7 @@ export default function DashboardLayout() {
 
           <nav className={cn("space-y-1", isSidebarOpen ? "px-3" : "px-3")}>
             <NavLink
-              to="/"
+              to="/dashboard"
               end
               title="Dashboard"
               className={({ isActive }) => cn(
@@ -205,7 +210,7 @@ export default function DashboardLayout() {
               {isSidebarOpen && <span>Dashboard</span>}
             </NavLink>
             <NavLink
-              to="/history"
+              to="/dashboard/history"
               title="Job History"
               className={({ isActive }) => cn(
                 "w-full flex items-center py-2.5 rounded-lg transition-all duration-200 group",
@@ -218,7 +223,7 @@ export default function DashboardLayout() {
             </NavLink>
 
             <NavLink
-              to="/analytics"
+              to="/dashboard/analytics"
               title="Analytics & Health"
               className={({ isActive }) => cn(
                 "w-full flex items-center py-2.5 rounded-lg transition-all duration-200 group",
@@ -231,7 +236,7 @@ export default function DashboardLayout() {
             </NavLink>
 
             <NavLink
-              to="/dlq"
+              to="/dashboard/dlq"
               title="Dead-Letter Queue"
               className={({ isActive }) => cn(
                 "w-full flex items-center py-2.5 rounded-lg transition-all duration-200 group",
@@ -265,7 +270,7 @@ export default function DashboardLayout() {
 
               <div className={cn("overflow-hidden transition-all duration-200", isAssignJobsOpen && isSidebarOpen ? "max-h-40 opacity-100 mt-1" : "max-h-0 opacity-0")}>
                 <NavLink
-                  to="/submit-image"
+                  to="/dashboard/submit-image"
                   className={({ isActive }) => cn(
                     "w-full flex items-center pl-11 pr-3 py-2 rounded-lg transition-all duration-200 group text-sm",
                     isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
@@ -274,7 +279,7 @@ export default function DashboardLayout() {
                   <ImageIcon className="mr-2 w-4 h-4 shrink-0" /> <span className="whitespace-nowrap">Image Job</span>
                 </NavLink>
                 <NavLink
-                  to="/submit-csv"
+                  to="/dashboard/submit-csv"
                   className={({ isActive }) => cn(
                     "w-full flex items-center pl-11 pr-3 py-2 rounded-lg transition-all duration-200 group text-sm mt-1",
                     isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
@@ -307,7 +312,7 @@ export default function DashboardLayout() {
 
               <div className={cn("overflow-hidden transition-all duration-200", isDataOpen && isSidebarOpen ? "max-h-40 opacity-100 mt-1" : "max-h-0 opacity-0")}>
                 <NavLink
-                  to="/csv-records"
+                  to="/dashboard/csv-records"
                   className={({ isActive }) => cn(
                     "w-full flex items-center pl-11 pr-3 py-2 rounded-lg transition-all duration-200 group text-sm",
                     isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
@@ -316,7 +321,7 @@ export default function DashboardLayout() {
                   <FileText className="mr-2 w-4 h-4 shrink-0" /> <span className="whitespace-nowrap">CSV Records</span>
                 </NavLink>
                 <NavLink
-                  to="/image-records"
+                  to="/dashboard/image-records"
                   className={({ isActive }) => cn(
                     "w-full flex items-center pl-11 pr-3 py-2 rounded-lg transition-all duration-200 group text-sm mt-1",
                     isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
@@ -331,7 +336,7 @@ export default function DashboardLayout() {
 
         {/* User Profile & Logout */}
         <div className="p-4 border-t border-neutral-800">
-          <Link to="/profile" className={cn("flex items-center mb-4 hover:bg-neutral-800/50 p-2 rounded-lg transition-colors cursor-pointer", isSidebarOpen ? "justify-between" : "justify-center")}>
+          <Link to="/dashboard/profile" className={cn("flex items-center mb-4 hover:bg-neutral-800/50 p-2 rounded-lg transition-colors cursor-pointer", isSidebarOpen ? "justify-between" : "justify-center")}>
             <div className="flex items-center overflow-hidden" title={user?.name || 'User'}>
               <div className="w-8 h-8 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center shrink-0 overflow-hidden">
                 {user?.picture ? (
@@ -348,8 +353,16 @@ export default function DashboardLayout() {
               )}
             </div>
           </Link>
+          <Link
+            to="/"
+            title="Home"
+            className={cn("w-full flex items-center py-2 text-sm text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200 rounded-lg transition-colors", isSidebarOpen ? "px-3" : "justify-center")}
+          >
+            <Home className={cn("w-4 h-4 shrink-0", isSidebarOpen ? "mr-2" : "")} />
+            {isSidebarOpen && <span>Home</span>}
+          </Link>
           <button
-            onClick={handleLogout}
+            onClick={() => setShowLogoutConfirm(true)}
             title="Logout"
             className={cn("w-full flex items-center py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors", isSidebarOpen ? "px-3" : "justify-center")}
           >
@@ -377,13 +390,13 @@ export default function DashboardLayout() {
         </header>
 
         {/* Content Area */}
-        <Outlet context={{ 
-          events, 
-          stats, 
+        <Outlet context={{
+          events,
+          stats,
           clearEvents: () => {
             setEvents([]);
             localStorage.setItem('pulseq_events_cleared_at', Date.now().toString());
-          } 
+          }
         }} />
       </div>
     </div>
