@@ -50,7 +50,14 @@ export default function DashboardLayout() {
     const fetchInitialJobs = async () => {
       try {
         const [statsRes, jobsRes] = await Promise.all([
-          axios.get('http://localhost:4000/jobs/stats', { withCredentials: true }),
+          axios.get('http://localhost:4000/jobs/stats', { 
+            withCredentials: true,
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
+          }),
           axios.get('http://localhost:4000/jobs?limit=50', { withCredentials: true })
         ]);
 
@@ -65,12 +72,17 @@ export default function DashboardLayout() {
             if (job.status === 'completed') type = 'completed';
             if (job.status === 'failed') type = 'failed';
 
+            const rawError = job.error;
+            const failedReason = typeof rawError === 'object' && rawError !== null
+              ? rawError.message || JSON.stringify(rawError)
+              : rawError;
+
             return {
               queueName: job.queue_name,
               jobId: job.id,
               jobName: job.name,
               type,
-              failedReason: job.error,
+              failedReason,
               timestamp: new Date(job.updated_at).getTime()
             };
           });
@@ -92,8 +104,12 @@ export default function DashboardLayout() {
     newSocket.on('connect', () => setIsConnected(true));
     newSocket.on('disconnect', () => setIsConnected(false));
 
-    const handleEvent = (type: JobEvent['type']) => (data: Record<string, unknown>) => {
-      setEvents((prev) => [{ ...data, type, timestamp: Date.now() } as JobEvent, ...prev].slice(0, 100));
+    const handleEvent = (type: JobEvent['type']) => async (data: Record<string, unknown>) => {
+      const rawReason = data.failedReason;
+      const failedReason = typeof rawReason === 'object' && rawReason !== null
+        ? (rawReason as any).message || JSON.stringify(rawReason)
+        : rawReason;
+      setEvents((prev) => [{ ...data, type, failedReason, timestamp: Date.now() } as JobEvent, ...prev].slice(0, 100));
 
       if (type === 'completed') {
         toast.success(`Job ${data.jobName || data.jobId} completed successfully`);
@@ -101,25 +117,21 @@ export default function DashboardLayout() {
         toast.error(`Job ${data.jobName || data.jobId} failed`);
       }
 
-      setStats((prev) => {
-        const next = { ...prev };
-        if (type === 'active') {
-          next.active++;
-          if (next.waiting > 0) next.waiting--;
-        }
-        if (type === 'completed') {
-          if (next.active > 0) next.active--;
-          next.completed++;
-        }
-        if (type === 'failed') {
-          if (next.active > 0) next.active--;
-          next.failed++;
-        }
-        if (type === 'waiting') {
-          next.waiting++;
-        }
-        return next;
-      });
+      // Re-fetch stats directly from the backend to ensure perfect accuracy
+      // rather than trying to guess the counter increments/decrements.
+      try {
+        const statsRes = await axios.get('http://localhost:4000/jobs/stats', { 
+          withCredentials: true,
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        });
+        setStats(statsRes.data);
+      } catch (e) {
+        console.error('Failed to update stats on event', e);
+      }
     };
 
     newSocket.on('jobActive', handleEvent('active'));

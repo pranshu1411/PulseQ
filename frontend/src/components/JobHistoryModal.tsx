@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Loader2, Clock, CheckCircle2, XCircle, RefreshCw, Activity } from 'lucide-react';
+import { X, Loader2, Clock, CheckCircle2, XCircle, RefreshCw, Activity, RotateCcw } from 'lucide-react';
 import axios from 'axios';
 
 type JobLog = {
@@ -12,6 +12,7 @@ type JobLog = {
 type JobDetails = {
   id: string;
   name: string;
+  queue_name: string;
   status: string;
   error: string | null;
   created_at: string;
@@ -21,11 +22,13 @@ type JobDetails = {
 interface JobHistoryModalProps {
   jobId: string;
   onClose: () => void;
+  onRetry?: () => void;
 }
 
-export default function JobHistoryModal({ jobId, onClose }: JobHistoryModalProps) {
+export default function JobHistoryModal({ jobId, onClose, onRetry }: JobHistoryModalProps) {
   const [job, setJob] = useState<JobDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     const fetchJob = async () => {
@@ -43,6 +46,21 @@ export default function JobHistoryModal({ jobId, onClose }: JobHistoryModalProps
 
     fetchJob();
   }, [jobId]);
+
+  const handleRetry = async () => {
+    setRetrying(true);
+    try {
+      await axios.post(`http://localhost:4000/jobs/${jobId}/retry`, {}, { withCredentials: true });
+      // Re-fetch the job to show updated status and new log entry
+      const { data } = await axios.get(`http://localhost:4000/jobs/${jobId}`, { withCredentials: true });
+      setJob(data);
+      onRetry?.();
+    } catch (err) {
+      console.error('Failed to retry job', err);
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   const getEventIcon = (type: string) => {
     switch (type) {
@@ -109,13 +127,24 @@ export default function JobHistoryModal({ jobId, onClose }: JobHistoryModalProps
 
               {job.error && (
                 <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium">
-                  {job.error}
+                  {typeof job.error === 'object' ? (job.error as any).message || JSON.stringify(job.error) : job.error}
                 </div>
+              )}
+
+              {job.status === 'failed' && (
+                <button
+                  onClick={handleRetry}
+                  disabled={retrying}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RotateCcw className={`w-4 h-4 ${retrying ? 'animate-spin' : ''}`} />
+                  {retrying ? 'Retrying...' : 'Retry Job'}
+                </button>
               )}
 
               <div>
                 <h3 className="text-sm font-medium text-neutral-300 uppercase tracking-wider mb-4 px-1">Event Timeline</h3>
-                {job.logs && job.logs.length > 0 ? (
+                {job.logs ? (
                   <div className="relative border-l border-neutral-800 ml-3 pl-6 space-y-6">
                     {job.logs.map((log) => (
                       <div key={log.id} className="relative">
@@ -135,6 +164,22 @@ export default function JobHistoryModal({ jobId, onClose }: JobHistoryModalProps
                         </div>
                       </div>
                     ))}
+                    
+                    {/* Always show the initial Submitted event at the bottom of the timeline */}
+                    <div key="submitted" className="relative">
+                      <div className="absolute -left-[35px] top-1 bg-neutral-900 rounded-full p-0.5">
+                        <Clock className="w-5 h-5 text-neutral-400" />
+                      </div>
+                      <div>
+                        <div className="flex items-baseline justify-between mb-1">
+                          <span className="font-medium text-white capitalize">Submitted</span>
+                          <span className="text-xs text-neutral-500 font-mono">
+                            {new Date(job.created_at).toLocaleTimeString()}
+                          </span>
+                        </div>
+                        <p className="text-sm text-neutral-400 mt-1">Job was created and added to the queue</p>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <p className="text-sm text-neutral-500 italic px-1">No logs available for this job.</p>

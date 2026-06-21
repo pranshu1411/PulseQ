@@ -1,6 +1,6 @@
 import { useEffect, useState, Fragment } from 'react';
 import axios from 'axios';
-import { History, Activity, CheckCircle2, XCircle, Clock, Loader2, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { History, Activity, CheckCircle2, XCircle, Clock, Loader2, Download, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import JobHistoryModal from '../components/JobHistoryModal';
 
 type Job = {
@@ -26,6 +26,7 @@ export default function JobHistory() {
   const [loading, setLoading] = useState(true);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -46,6 +47,24 @@ export default function JobHistory() {
 
     fetchJobs();
   }, [page]);
+
+  const handleRetry = async (jobId: string) => {
+    setRetryingId(jobId);
+    try {
+      await axios.post(`http://localhost:4000/jobs/${jobId}/retry`, {}, { withCredentials: true });
+      // Refresh the list
+      const { data } = await axios.get(`http://localhost:4000/jobs`, {
+        params: { page, limit: 10 },
+        withCredentials: true,
+      });
+      setJobs(data.data);
+      setMeta(data.meta);
+    } catch (err) {
+      console.error('Failed to retry job', err);
+    } finally {
+      setRetryingId(null);
+    }
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -157,28 +176,39 @@ export default function JobHistory() {
                           {new Date(job.created_at).toLocaleTimeString()}
                         </td>
                         <td className="px-6 py-4">
-                          {job.queue_name === 'image-processing' && job.status === 'completed' && (
-                            <div className="flex items-center gap-2">
-                              <a 
-                                href={`http://localhost:4000/jobs/${job.id}/download/thumbnail`}
-                                target="_blank"
-                                rel="noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="inline-flex items-center px-2 py-1 text-xs font-medium text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 rounded transition-colors"
+                          <div className="flex items-center gap-2">
+                            {job.status === 'failed' && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleRetry(job.id); }}
+                                disabled={retryingId === job.id}
+                                className="inline-flex items-center px-2 py-1 text-xs font-medium text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <Download className="w-3 h-3 mr-1" /> Thumb
-                              </a>
-                              <a 
-                                href={`http://localhost:4000/jobs/${job.id}/download/compressed`}
-                                target="_blank"
-                                rel="noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="inline-flex items-center px-2 py-1 text-xs font-medium text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 rounded transition-colors"
-                              >
-                                <Download className="w-3 h-3 mr-1" /> Comp
-                              </a>
-                            </div>
-                          )}
+                                <RotateCcw className={`w-3 h-3 mr-1 ${retryingId === job.id ? 'animate-spin' : ''}`} /> Retry
+                              </button>
+                            )}
+                            {job.queue_name === 'image-processing' && job.status === 'completed' && (
+                              <>
+                                <a 
+                                  href={`http://localhost:4000/jobs/${job.id}/download/thumbnail`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center px-2 py-1 text-xs font-medium text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 rounded transition-colors"
+                                >
+                                  <Download className="w-3 h-3 mr-1" /> Thumb
+                                </a>
+                                <a 
+                                  href={`http://localhost:4000/jobs/${job.id}/download/compressed`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center px-2 py-1 text-xs font-medium text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 rounded transition-colors"
+                                >
+                                  <Download className="w-3 h-3 mr-1" /> Comp
+                                </a>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -221,7 +251,19 @@ export default function JobHistory() {
       {selectedJobId && (
         <JobHistoryModal 
           jobId={selectedJobId} 
-          onClose={() => setSelectedJobId(null)} 
+          onClose={() => setSelectedJobId(null)}
+          onRetry={async () => {
+            try {
+              const { data } = await axios.get(`http://localhost:4000/jobs`, {
+                params: { page, limit: 10 },
+                withCredentials: true,
+              });
+              setJobs(data.data);
+              setMeta(data.meta);
+            } catch (err) {
+              console.error('Failed to refresh jobs', err);
+            }
+          }}
         />
       )}
     </>
