@@ -37,4 +37,5 @@ build/
 ehthumbs.db
 Thumbs.db
 
-*.md
+distributed_job_queue_system.md
+*.csv
