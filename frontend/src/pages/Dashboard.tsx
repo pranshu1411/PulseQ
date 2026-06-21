@@ -67,7 +67,8 @@ export default function Dashboard() {
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-baseline mb-1">
                     <p className="text-sm font-medium text-neutral-200">
-                      Job <span className="font-mono text-xs text-neutral-400 bg-neutral-800 px-1.5 py-0.5 rounded ml-1">{ev.jobName || ev.jobId}</span>
+                      Job <span className="font-mono text-xs text-neutral-400 bg-neutral-800 px-1.5 py-0.5 rounded ml-1">{ev.jobName || 'Unnamed'}</span>
+                      <span className="text-[10px] text-neutral-500 ml-2 font-mono">#{ev.jobId.slice(0, 8)}</span>
                     </p>
                     <span className="text-xs text-neutral-500 font-mono">
                       {new Date(ev.timestamp).toLocaleTimeString()}

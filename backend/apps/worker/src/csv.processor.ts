@@ -81,61 +81,49 @@ export class CsvProcessor extends BaseProcessor {
     };
 
     try {
-      return await new Promise((resolve, reject) => {
-        const parser = fs.createReadStream(tempFilePath).pipe(csvParser());
+      const parser = fs.createReadStream(tempFilePath).pipe(csvParser());
+      
+      try {
+        for await (const row of parser) {
+          processedRows++;
+
+          // Basic validation
+          const name = row.name?.trim();
+          const category = row.category?.trim();
+          const price = parseFloat(row.price);
+          const stock = parseInt(row.stock, 10);
+          const description = row.description?.trim();
+
+          if (!name || !category || isNaN(price) || isNaN(stock)) {
+            failedRows++;
+            errors.push(`Row ${processedRows}: Validation failed. Name, category, valid price, and stock are required.`);
+            continue;
+          }
+
+          batch.push({ name, category, price, stock, description, userId });
+
+          if (batch.length >= batchSize) {
+            await flushBatch();
+            const progress = totalExpectedRows > 0 ? Math.floor((processedRows / totalExpectedRows) * 100) : 0;
+            await job.updateProgress(progress);
+          }
+        }
         
-        parser.on('data', async (row) => {
-            try {
-              processedRows++;
+        await flushBatch();
+        
+        if (processedRows > 0 && importedRows === 0) {
+          throw new Error('All rows failed validation. The file might not be a valid CSV format.');
+        }
 
-              // Basic validation
-              const name = row.name?.trim();
-              const category = row.category?.trim();
-              const price = parseFloat(row.price);
-              const stock = parseInt(row.stock, 10);
-              const description = row.description?.trim();
-
-              if (!name || !category || isNaN(price) || isNaN(stock)) {
-                failedRows++;
-                errors.push(`Row ${processedRows}: Validation failed. Name, category, valid price, and stock are required.`);
-                return;
-              }
-
-              batch.push({ name, category, price, stock, description, userId });
-
-              if (batch.length >= batchSize) {
-                parser.pause();
-                await flushBatch();
-                const progress = totalExpectedRows > 0 ? Math.floor((processedRows / totalExpectedRows) * 100) : 0;
-                await job.updateProgress(progress);
-                parser.resume();
-              }
-            } catch (err) {
-              parser.emit('error', err);
-            }
-          })
-          .on('end', async () => {
-            try {
-              await flushBatch();
-              
-              if (processedRows > 0 && importedRows === 0) {
-                return reject(new Error('All rows failed validation. The file might not be a valid CSV format.'));
-              }
-
-              resolve({
-                totalRows: processedRows,
-                importedRows,
-                failedRows,
-                errors: errors.slice(0, 50), // Only return first 50 errors to avoid massive logs
-              });
-            } catch (err) {
-              reject(err);
-            }
-          })
-          .on('error', (err) => {
-            reject(err);
-          });
-      });
+        return {
+          totalRows: processedRows,
+          importedRows,
+          failedRows,
+          errors: errors.slice(0, 50),
+        };
+      } catch (err) {
+        throw err;
+      }
     } finally {
       // Ensure we aggressively clean up the temp file
       fsp.unlink(tempFilePath).catch(e => this.logger.error(`Failed to clean up temp file: ${e.message}`));

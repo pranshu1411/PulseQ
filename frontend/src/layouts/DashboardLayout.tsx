@@ -110,7 +110,23 @@ export default function DashboardLayout() {
       const failedReason = typeof rawReason === 'object' && rawReason !== null
         ? (rawReason as any).message || JSON.stringify(rawReason)
         : rawReason;
-      setEvents((prev) => [{ ...data, type, failedReason, timestamp: Date.now() } as JobEvent, ...prev].slice(0, 100));
+        
+      setEvents((prev) => {
+        const newEvent = { ...data, type, failedReason, timestamp: Date.now() } as JobEvent;
+        console.log(`[handleEvent] type=${type} jobId=${newEvent.jobId} data=${JSON.stringify(data)}`);
+        
+        if (type === 'progress') {
+          const existingIndex = prev.findIndex(e => e.jobId === newEvent.jobId && e.type === 'progress');
+          console.log(`[handleEvent] existingIndex=${existingIndex} prevLength=${prev.length}`);
+          if (existingIndex !== -1) {
+            const updated = [...prev];
+            updated[existingIndex] = newEvent;
+            return updated;
+          }
+        }
+        
+        return [newEvent, ...prev].slice(0, 100);
+      });
 
       if (type === 'completed') {
         toast.success(`Job ${data.jobName || data.jobId} completed successfully`);
