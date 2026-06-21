@@ -28,31 +28,45 @@ PulseQ is a scalable distributed job queue system supporting asynchronous task e
 
 ## Architecture
 
-```text
-┌─────────────┐     ┌──────────────┐     ┌──────────────┐     ┌────────────┐
-│   React UI  │────▶│  API Gateway │────▶│  Redis/BullMQ│────▶│   Workers  │
-│  (Vite/TS)  │◀────│   (NestJS)   │     │    Queues    │     │  (NestJS)  │
-└──────┬──────┘     └──────┬───────┘     └──────────────┘     └──────┬─────┘
-       │                   │                                         │
-       │            ┌──────▼───────┐                                 │
-       └───────────▶│  Socket.IO   │                                 │
-                    │  (Live Feed) │                                 │
-                    └──────────────┘                                 │
-                                                                     │
-                    ┌───────────────┐                                │
-        ┌──────────▶│  PostgreSQL   │◀───────────────────────────────┤
-        │           │  (Prisma ORM) │                                │
-        │           └───────────────┘                                │
-   API Gateway                                                       │
-        │           ┌───────────────┐                                │
-        └──────────▶│     MinIO     │◀───────────────────────────────┘
-                    │  (S3 Storage) │
-                    └───────────────┘
-
-                    ┌──────────────┐     ┌──────────────┐
-                    │  Prometheus  │────▶│   Grafana    │
-                    │   Metrics    │     │  Dashboards  │
-                    └──────────────┘     └──────────────┘
+```mermaid
+flowchart TD
+    classDef frontend fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+    classDef backend fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+    classDef worker fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
+    classDef storage fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
+    classDef queue fill:#ef4444,stroke:#b91c1c,stroke-width:2px,color:#fff
+    classDef metrics fill:#ec4899,stroke:#be185d,stroke-width:2px,color:#fff
+    
+    UI["💻 React UI (Vite + TS + Framer Motion)"]:::frontend
+    Gateway["🚪 API Gateway (NestJS)"]:::backend
+    SocketIO["📡 WebSocket Server (Socket.IO)"]:::backend
+    
+    Queue["⚡ Redis / BullMQ"]:::queue
+    Worker["👷 Worker Nodes (NestJS)"]:::worker
+    
+    DB["🗄️ PostgreSQL (Prisma ORM)"]:::storage
+    MinIO["📦 MinIO (S3 Storage)"]:::storage
+    
+    Prometheus["📈 Prometheus"]:::metrics
+    Grafana["📊 Grafana"]:::metrics
+    
+    UI -- "REST Requests" --> Gateway
+    UI <== "Live Job Updates" ==> SocketIO
+    
+    Gateway -- "Produces Jobs" --> Queue
+    Queue -- "Consumes Jobs" --> Worker
+    
+    Worker -- "Writes Final State" --> DB
+    Gateway -- "Reads/Writes State" --> DB
+    
+    Worker -- "Reads/Writes Files" --> MinIO
+    Gateway -- "Uploads/Reads Files" --> MinIO
+    
+    Queue -. "BullMQ QueueEvents" .-> SocketIO
+    
+    Gateway -. "/metrics" .-> Prometheus
+    Worker -. "/metrics" .-> Prometheus
+    Prometheus -. "Data Source" .-> Grafana
 ```
 
 ## Features
@@ -216,7 +230,13 @@ PulseQ/
 
 ## Screenshots
 
-> _Coming soon — submit a PR with screenshots of the dashboard, analytics, and DLQ pages!_
+<div align="center">
+  <img src="frontend/public/slide1.png" width="48%" alt="Screenshot 1" />
+  <img src="frontend/public/slide2.png" width="48%" alt="Screenshot 2" />
+  <br/>
+  <img src="frontend/public/slide3.png" width="48%" alt="Screenshot 3" />
+  <img src="frontend/public/slide4.png" width="48%" alt="Screenshot 4" />
+</div>
 
 ## License
 
