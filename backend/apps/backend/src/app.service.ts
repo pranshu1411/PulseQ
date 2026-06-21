@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException, Logger, OnModuleInit, OnModuleDestroy, HttpException, HttpStatus } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Response } from 'express';
 import * as path from 'path';
@@ -159,6 +159,20 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
       };
     }
 
+    const concurrentJobsCount = await this.prisma.job.count({
+      where: {
+        userId,
+        status: { in: ['queued', 'active', 'delayed'] },
+      },
+    });
+
+    if (concurrentJobsCount >= 10) {
+      throw new HttpException(
+        'You have reached the maximum of 10 concurrent jobs. Please wait for them to finish before submitting more.',
+        HttpStatus.TOO_MANY_REQUESTS
+      );
+    }
+
     // 1. Create a job record in Postgres via Prisma
     const dbJob = await this.prisma.job.create({
       data: {
@@ -223,6 +237,20 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
         message: 'A duplicate Csv Job is already queued or processing.',
         jobId: duplicate.id,
       };
+    }
+
+    const concurrentJobsCount = await this.prisma.job.count({
+      where: {
+        userId,
+        status: { in: ['queued', 'active', 'delayed'] },
+      },
+    });
+
+    if (concurrentJobsCount >= 10) {
+      throw new HttpException(
+        'You have reached the maximum of 10 concurrent jobs. Please wait for them to finish before submitting more.',
+        HttpStatus.TOO_MANY_REQUESTS
+      );
     }
 
     // 1. Create a job record in Postgres via Prisma

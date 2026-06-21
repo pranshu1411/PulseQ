@@ -10,9 +10,15 @@ import { AuthModule } from './auth/auth.module';
 import { ProductsController } from './products.controller';
 import { ImagesController } from './images.controller';
 import { StorageModule } from '@app/shared';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 20,
+    }]),
     StorageModule,
     PrometheusModule.register(),
     AuthModule,
@@ -32,6 +38,10 @@ import { StorageModule } from '@app/shared';
   ],
   controllers: [AppController, ProductsController, ImagesController],
   providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
     AppService,
     makeCounterProvider({
       name: 'pulseq_jobs_added_total',
