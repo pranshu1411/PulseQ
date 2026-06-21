@@ -78,6 +78,16 @@ export default function Dashboard() {
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-neutral-800 text-neutral-300">
                       {ev.queueName}
                     </span>
+                    {ev.priority === 1 && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                        High Priority
+                      </span>
+                    )}
+                    {ev.priority === 10 && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-neutral-800/50 text-neutral-500 border border-neutral-800">
+                        Low Priority
+                      </span>
+                    )}
                     <span className="capitalize">{ev.type}</span>
                     {ev.type === 'progress' && ev.data !== undefined && (
                       <span className="text-indigo-400 font-medium">({String(ev.data)}%)</span>

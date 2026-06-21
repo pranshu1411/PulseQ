@@ -165,6 +165,7 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
         name: payload.jobName || IMAGE_JOB_NAME,
         queue_name: IMAGE_NAME,
         status: 'queued',
+        priority: payload.priority || 5,
         payload: payload as unknown as any, // Cast to any internally if needed, but the interface handles JSON. Actually, let's just cast to any for Prisma to accept it. Oh wait, if payload is not pure JSON, let's pass JSON.parse(JSON.stringify(payload)).
         userId,
       },
@@ -175,6 +176,7 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
       // We pass the Postgres Job ID as the BullMQ Job ID so they map 1:1
       const bullJob = await this.imageQueue.add(IMAGE_JOB_NAME, payload, {
         jobId: dbJob.id,
+        priority: payload.priority || 5,
         attempts: 3,
         backoff: {
           type: 'exponential',
@@ -229,6 +231,7 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
         name: payload.jobName || CSV_JOB_NAME,
         queue_name: CSV_NAME,
         status: 'queued',
+        priority: payload.priority || 5,
         payload: payload as unknown as any,
         userId,
       },
@@ -239,6 +242,7 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
       // We pass the Postgres Job ID as the BullMQ Job ID so they map 1:1
       const bullJob = await this.csvQueue.add(CSV_JOB_NAME, payload, {
         jobId: dbJob.id,
+        priority: payload.priority || 5,
         attempts: 3,
         backoff: {
           type: 'exponential',

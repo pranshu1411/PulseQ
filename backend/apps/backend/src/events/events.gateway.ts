@@ -49,11 +49,11 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     try {
       const job = await this.prisma.job.findUnique({
         where: { id: jobId },
-        select: { userId: true, name: true },
+        select: { userId: true, name: true, priority: true },
       });
       if (job) {
         this.logger.log(`Emitting ${eventName} to user:${job.userId} for job ${jobId}`);
-        this.server.to(`user:${job.userId}`).emit(eventName, { ...data, jobName: job.name });
+        this.server.to(`user:${job.userId}`).emit(eventName, { ...data, jobName: job.name, priority: job.priority });
       } else {
         this.logger.warn(`Job ${jobId} not found in DB, cannot emit ${eventName}`);
       }

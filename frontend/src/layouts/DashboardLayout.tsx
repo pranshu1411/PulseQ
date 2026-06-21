@@ -21,6 +21,7 @@ export type JobEvent = {
   returnvalue?: any;
   failedReason?: string;
   timestamp: number;
+  priority?: number;
 };
 
 export default function DashboardLayout() {

@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 
 export default function SubmitCsvJob() {
   const [jobName, setJobName] = useState('');
+  const [priority, setPriority] = useState<number>(5);
   const [inputType, setInputType] = useState<'url' | 'file'>('url');
   
   const [csvURLs, setCsvURLs] = useState<string[]>([]);
@@ -87,7 +88,8 @@ export default function SubmitCsvJob() {
         axios.post('http://localhost:4000/jobs/csv', {
           jobName: jobName || undefined,
           fileUrl: url,
-          batchSize: 10
+          batchSize: 10,
+          priority: priority
         }, { withCredentials: true })
       ));
       
@@ -124,15 +126,29 @@ export default function SubmitCsvJob() {
         </div>
         
         <form onSubmit={submitCsvJob} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-neutral-300 mb-2">Job Name (Optional)</label>
-            <input 
-              type="text" 
-              value={jobName} 
-              onChange={e => setJobName(e.target.value)} 
-              placeholder="e.g. Monthly Sales Import Batch"
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all placeholder:text-neutral-600" 
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-neutral-300 mb-2">Job Name (Optional)</label>
+              <input 
+                type="text" 
+                value={jobName} 
+                onChange={e => setJobName(e.target.value)} 
+                placeholder="e.g. Monthly Sales Import Batch"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all placeholder:text-neutral-600" 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-300 mb-2">Job Priority</label>
+              <select
+                value={priority}
+                onChange={e => setPriority(Number(e.target.value))}
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all appearance-none"
+              >
+                <option value={1}>High Priority (Bypasses Queue)</option>
+                <option value={5}>Normal Priority</option>
+                <option value={10}>Low Priority (Background Task)</option>
+              </select>
+            </div>
           </div>
 
           <div>

@@ -30,6 +30,10 @@ export class ImageProcessingPayload {
   @IsOptional()
   @IsObject()
   metadata?: Record<string, any>;
+
+  @IsOptional()
+  @IsNumber()
+  priority?: number;
 }
 
 export class CsvImportPayload {
@@ -43,6 +47,10 @@ export class CsvImportPayload {
   @IsNumber()
   @Min(1)
   batchSize: number;
+
+  @IsOptional()
+  @IsNumber()
+  priority?: number;
 }
 
 export * from './storage.service';
