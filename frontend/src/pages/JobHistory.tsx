@@ -1,6 +1,6 @@
 import { useEffect, useState, Fragment } from 'react';
 import axios from 'axios';
-import { History, Activity, CheckCircle2, XCircle, Clock, Loader2, Download, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
+import { History, Activity, CheckCircle2, XCircle, Clock, Loader2, Download, ChevronLeft, ChevronRight, RotateCcw, Trash2 } from 'lucide-react';
 import JobHistoryModal from '../components/JobHistoryModal';
 
 type Job = {
@@ -74,6 +74,8 @@ export default function JobHistory() {
         return <CheckCircle2 className="w-4 h-4 text-emerald-400" />;
       case 'failed':
         return <XCircle className="w-4 h-4 text-red-400" />;
+      case 'purged':
+        return <Trash2 className="w-4 h-4 text-neutral-500" />;
       default:
         return <Clock className="w-4 h-4 text-amber-400" />;
     }
@@ -87,6 +89,8 @@ export default function JobHistory() {
         return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
       case 'failed':
         return 'bg-red-500/10 text-red-400 border-red-500/20';
+      case 'purged':
+        return 'bg-neutral-500/10 text-neutral-400 border-neutral-500/20';
       default:
         return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
     }

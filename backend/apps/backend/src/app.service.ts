@@ -321,16 +321,22 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
     return { message: `Job ${jobId} has been requeued for processing.` };
   }
 
-  async getAllJobs(page: number, limit: number, userId: string) {
+  async getAllJobs(page: number, limit: number, status: string | undefined, userId: string) {
     const skip = (page - 1) * limit;
+    
+    const whereClause: any = { userId };
+    if (status) {
+      whereClause.status = status;
+    }
+
     const [data, total] = await Promise.all([
       this.prisma.job.findMany({
-        where: { userId },
+        where: whereClause,
         skip,
         take: limit,
-        orderBy: { created_at: 'desc' },
+        orderBy: { updated_at: 'desc' },
       }),
-      this.prisma.job.count({ where: { userId } }),
+      this.prisma.job.count({ where: whereClause }),
     ]);
 
     return {
@@ -355,10 +361,32 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
     for (const stat of stats) {
       if (stat.status === 'active') result.active += stat._count;
       else if (stat.status === 'completed') result.completed += stat._count;
-      else if (stat.status === 'failed') result.failed += stat._count;
+      else if (stat.status === 'failed' || stat.status === 'purged') result.failed += stat._count;
       else result.waiting += stat._count;
     }
     return result;
+  }
+
+  async retryAllFailedJobs(userId: string) {
+    const failedJobs = await this.prisma.job.findMany({ where: { userId, status: 'failed' } });
+    let count = 0;
+    for (const job of failedJobs) {
+      try {
+        await this.retryJob(job.id, userId);
+        count++;
+      } catch (e) {
+        this.logger.error(`Failed to retry job ${job.id}`, e);
+      }
+    }
+    return { message: `Successfully requeued ${count} failed jobs.` };
+  }
+
+  async purgeAllFailedJobs(userId: string) {
+    const res = await this.prisma.job.updateMany({ 
+      where: { userId, status: 'failed' },
+      data: { status: 'purged' }
+    });
+    return { message: `Successfully purged ${res.count} permanently failed jobs.` };
   }
 
   async downloadJobFile(jobId: string, type: 'thumbnail' | 'compressed', userId: string) {
@@ -515,7 +543,7 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
 
   async getFailureAnalytics(userId: string) {
     const failedJobs = await this.prisma.job.findMany({
-      where: { userId, status: 'failed' },
+      where: { userId, status: { in: ['failed', 'purged'] } },
       take: 100,
       orderBy: { updated_at: 'desc' },
       select: { error: true }

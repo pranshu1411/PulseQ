@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Req, UseGuards, Res, Query, UseInterceptors, UploadedFiles, StreamableFile } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Req, UseGuards, Res, Query, UseInterceptors, UploadedFiles, StreamableFile } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import type { Response, Express } from 'express';
@@ -113,6 +113,16 @@ export class AppController {
     return this.appService.getJobLogs(jobId, parseInt(page, 10), parseInt(limit, 10), req.user.id);
   }
 
+  @Post('dlq/replay-all')
+  async replayAllFailedJobs(@Req() req: AuthenticatedRequest) {
+    return this.appService.retryAllFailedJobs(req.user.id);
+  }
+
+  @Delete('dlq/purge-all')
+  async purgeAllFailedJobs(@Req() req: AuthenticatedRequest) {
+    return this.appService.purgeAllFailedJobs(req.user.id);
+  }
+
   @Post(':id/retry')
   async retryJob(@Param('id') jobId: string, @Req() req: AuthenticatedRequest) {
     return this.appService.retryJob(jobId, req.user.id);
@@ -122,9 +132,10 @@ export class AppController {
   async getAllJobs(
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
+    @Query('status') status: string | undefined,
     @Req() req: AuthenticatedRequest
   ) {
-    return this.appService.getAllJobs(parseInt(page, 10), parseInt(limit, 10), req.user.id);
+    return this.appService.getAllJobs(parseInt(page, 10), parseInt(limit, 10), status, req.user.id);
   }
 
   @Get(':id/download/:type')

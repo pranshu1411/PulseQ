@@ -12,6 +12,7 @@ import JobHistory from './pages/JobHistory';
 import ImageRecords from './pages/ImageRecords';
 import UserProfile from './pages/UserProfile';
 import Analytics from './pages/Analytics';
+import DeadLetterQueue from './pages/DeadLetterQueue';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -56,6 +57,7 @@ export default function App() {
             <Route path="history" element={<JobHistory />} />
             <Route path="profile" element={<UserProfile />} />
             <Route path="analytics" element={<Analytics />} />
+            <Route path="dlq" element={<DeadLetterQueue />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
