@@ -7,6 +7,7 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(WorkerService.name);
   private workerId: string | null = null;
   private heartbeatInterval: NodeJS.Timeout | null = null;
+  private lastCpus: os.CpuInfo[] | null = null;
 
   constructor(private readonly prisma: PrismaService) { }
 
@@ -28,8 +29,33 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
     this.heartbeatInterval = setInterval(async () => {
       if (!this.workerId) return;
       try {
-        const cpus = os.cpus();
-        const cpuUsage = Math.min((os.loadavg()[0] / cpus.length) * 100, 100);
+        const currentCpus = os.cpus();
+        let cpuUsage = 0;
+
+        if (this.lastCpus) {
+          let totalIdle = 0;
+          let totalTick = 0;
+
+          for (let i = 0; i < currentCpus.length; i++) {
+            const cpu = currentCpus[i];
+            const prevCpu = this.lastCpus[i];
+
+            for (const type in cpu.times) {
+              totalTick += cpu.times[type as keyof typeof cpu.times] - prevCpu.times[type as keyof typeof cpu.times];
+            }
+            totalIdle += cpu.times.idle - prevCpu.times.idle;
+          }
+
+          if (totalTick > 0) {
+            cpuUsage = (1 - totalIdle / totalTick) * 100;
+          }
+        } else {
+          // On first tick, we don't have a delta, so we use loadavg if available (non-Windows) or default to 0
+          const load = os.loadavg()[0];
+          cpuUsage = os.platform() === 'win32' ? 0 : Math.min((load / currentCpus.length) * 100, 100);
+        }
+        
+        this.lastCpus = currentCpus;
         const memoryUsage = process.memoryUsage().rss / 1024 / 1024; // in MB
 
         await this.prisma.$transaction([

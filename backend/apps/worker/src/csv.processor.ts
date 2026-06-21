@@ -65,6 +65,12 @@ export class CsvProcessor extends BaseProcessor {
     // Account for CSV header row
     totalExpectedRows = Math.max(0, totalExpectedRows - 1);
 
+    // 1. Idempotency: Clean up any partially imported products from previous attempts of this exact job
+    await this.prisma.product.deleteMany({
+      where: { jobId: job.id }
+    });
+    this.logger.log(`Cleaned up any previous partially imported products for job ${job.id}`);
+
     // 2. Parse CSV
     let processedRows = 0;
     let importedRows = 0;
@@ -106,7 +112,7 @@ export class CsvProcessor extends BaseProcessor {
             continue;
           }
 
-          batch.push({ name, category, price, stock, description, userId });
+          batch.push({ name, category, price, stock, description, userId, jobId: job.id });
 
           if (batch.length >= batchSize) {
             await flushBatch();
@@ -121,12 +127,25 @@ export class CsvProcessor extends BaseProcessor {
           throw new Error('All rows failed validation. The file might not be a valid CSV format.');
         }
 
-        return {
+        const result = {
           totalRows: processedRows,
           importedRows,
           failedRows,
           errors: errors.slice(0, 50),
         };
+
+        // Guarantee DB is updated BEFORE process() returns to prevent shutdown race conditions
+        await this.prisma.$transaction([
+          this.prisma.job.update({
+            where: { id: job.id },
+            data: { status: 'completed', result: result, completed_at: new Date() },
+          }),
+          this.prisma.jobLog.create({
+            data: { job_id: job.id, event_type: 'completed', message: 'Job completed successfully' },
+          }),
+        ]);
+
+        return result;
       } catch (err) {
         throw err;
       }

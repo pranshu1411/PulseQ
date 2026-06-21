@@ -88,6 +88,17 @@ export class ImageProcessor extends BaseProcessor {
       }
     });
 
+    // Guarantee DB is updated BEFORE process() returns to prevent shutdown race conditions
+    await this.prisma.$transaction([
+      this.prisma.job.update({
+        where: { id: job.id },
+        data: { status: 'completed', result: result, completed_at: new Date() },
+      }),
+      this.prisma.jobLog.create({
+        data: { job_id: job.id, event_type: 'completed', message: 'Job completed successfully' },
+      }),
+    ]);
+
     return result;
   }
 }

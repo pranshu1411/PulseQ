@@ -53,54 +53,54 @@ export default function DashboardLayout() {
     document.title = `${getPageTitle(location.pathname)} | PulseQ`;
   }, [location.pathname]);
 
+  const fetchInitialJobs = async () => {
+    try {
+      const [statsRes, jobsRes] = await Promise.all([
+        axios.get('http://localhost:4000/jobs/stats', {
+          withCredentials: true,
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        }),
+        axios.get('http://localhost:4000/jobs?limit=50', { withCredentials: true })
+      ]);
+
+      const clearedAtStr = localStorage.getItem('pulseq_events_cleared_at');
+      const clearedAt = clearedAtStr ? parseInt(clearedAtStr, 10) : 0;
+
+      const initialEvents: JobEvent[] = jobsRes.data.data
+        .filter((job: any) => new Date(job.updated_at).getTime() > clearedAt && job.status !== 'purged')
+        .map((job: any) => {
+          let type: JobEvent['type'] = 'waiting';
+          if (job.status === 'active') type = 'active';
+          if (job.status === 'completed') type = 'completed';
+          if (job.status === 'failed') type = 'failed';
+
+          const rawError = job.error;
+          const failedReason = typeof rawError === 'object' && rawError !== null
+            ? rawError.message || JSON.stringify(rawError)
+            : rawError;
+
+          return {
+            queueName: job.queue_name,
+            jobId: job.id,
+            jobName: job.name,
+            type,
+            failedReason,
+            timestamp: new Date(job.updated_at).getTime()
+          };
+        });
+
+      setStats(statsRes.data);
+      setEvents(initialEvents);
+    } catch (err) {
+      console.error('Failed to fetch initial stats', err);
+    }
+  };
+
   useEffect(() => {
-    const fetchInitialJobs = async () => {
-      try {
-        const [statsRes, jobsRes] = await Promise.all([
-          axios.get('http://localhost:4000/jobs/stats', {
-            withCredentials: true,
-            headers: {
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache',
-              'Expires': '0'
-            }
-          }),
-          axios.get('http://localhost:4000/jobs?limit=50', { withCredentials: true })
-        ]);
-
-        const clearedAtStr = localStorage.getItem('pulseq_events_cleared_at');
-        const clearedAt = clearedAtStr ? parseInt(clearedAtStr, 10) : 0;
-
-        const initialEvents: JobEvent[] = jobsRes.data.data
-          .filter((job: any) => new Date(job.updated_at).getTime() > clearedAt)
-          .map((job: any) => {
-            let type: JobEvent['type'] = 'waiting';
-            if (job.status === 'active') type = 'active';
-            if (job.status === 'completed') type = 'completed';
-            if (job.status === 'failed') type = 'failed';
-
-            const rawError = job.error;
-            const failedReason = typeof rawError === 'object' && rawError !== null
-              ? rawError.message || JSON.stringify(rawError)
-              : rawError;
-
-            return {
-              queueName: job.queue_name,
-              jobId: job.id,
-              jobName: job.name,
-              type,
-              failedReason,
-              timestamp: new Date(job.updated_at).getTime()
-            };
-          });
-
-        setStats(statsRes.data);
-        setEvents(initialEvents);
-      } catch (err) {
-        console.error('Failed to fetch initial stats', err);
-      }
-    };
-
     fetchInitialJobs();
 
     const newSocket = io('http://localhost:4000', {
@@ -121,14 +121,13 @@ export default function DashboardLayout() {
         const newEvent = { ...data, type, failedReason, timestamp: Date.now() } as JobEvent;
         console.log(`[handleEvent] type=${type} jobId=${newEvent.jobId} data=${JSON.stringify(data)}`);
 
-        if (type === 'progress') {
-          const existingIndex = prev.findIndex(e => e.jobId === newEvent.jobId && e.type === 'progress');
-          console.log(`[handleEvent] existingIndex=${existingIndex} prevLength=${prev.length}`);
-          if (existingIndex !== -1) {
-            const updated = [...prev];
-            updated[existingIndex] = newEvent;
-            return updated;
-          }
+        const existingIndex = prev.findIndex(e => e.jobId === newEvent.jobId);
+        
+        if (existingIndex !== -1) {
+          const updated = [...prev];
+          updated[existingIndex] = newEvent;
+          updated.splice(existingIndex, 1);
+          return [newEvent, ...updated].slice(0, 100);
         }
 
         return [newEvent, ...prev].slice(0, 100);
@@ -396,7 +395,8 @@ export default function DashboardLayout() {
           clearEvents: () => {
             setEvents([]);
             localStorage.setItem('pulseq_events_cleared_at', Date.now().toString());
-          }
+          },
+          refreshEvents: fetchInitialJobs
         }} />
       </div>
     </div>

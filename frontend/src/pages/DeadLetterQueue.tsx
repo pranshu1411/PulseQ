@@ -3,6 +3,7 @@ import axios from 'axios';
 import { AlertTriangle, RotateCcw, Trash2, Loader2, DatabaseZap } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
+import { useOutletContext } from 'react-router-dom';
 import JobHistoryModal from '../components/JobHistoryModal';
 
 type Job = {
@@ -24,6 +25,7 @@ export default function DeadLetterQueue() {
   const [purgingAll, setPurgingAll] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<'replay' | 'purge' | null>(null);
+  const { refreshEvents } = useOutletContext<{ refreshEvents: () => void }>();
 
   const fetchDLQ = async () => {
     try {
@@ -51,6 +53,7 @@ export default function DeadLetterQueue() {
       const res = await axios.post('http://localhost:4000/jobs/dlq/replay-all', {}, { withCredentials: true });
       toast.success(res.data.message || 'Jobs requeued successfully');
       fetchDLQ();
+      refreshEvents();
     } catch (err) {
       console.error('Failed to replay jobs', err);
       toast.error('Failed to replay jobs');
@@ -66,6 +69,7 @@ export default function DeadLetterQueue() {
       const res = await axios.delete('http://localhost:4000/jobs/dlq/purge-all', { withCredentials: true });
       toast.success(res.data.message || 'Jobs purged successfully');
       fetchDLQ();
+      refreshEvents();
     } catch (err) {
       console.error('Failed to purge jobs', err);
       toast.error('Failed to purge jobs');
@@ -79,8 +83,20 @@ export default function DeadLetterQueue() {
       await axios.post(`http://localhost:4000/jobs/${jobId}/retry`, {}, { withCredentials: true });
       toast.success('Job requeued');
       fetchDLQ();
+      refreshEvents();
     } catch (err) {
       toast.error('Failed to retry job');
+    }
+  };
+
+  const handleDeleteSingle = async (jobId: string) => {
+    try {
+      await axios.delete(`http://localhost:4000/jobs/dlq/${jobId}`, { withCredentials: true });
+      toast.success('Job deleted');
+      fetchDLQ();
+      refreshEvents();
+    } catch (err) {
+      toast.error('Failed to delete job');
     }
   };
 
@@ -190,6 +206,15 @@ export default function DeadLetterQueue() {
                         className="inline-flex items-center text-indigo-400 hover:text-indigo-300 transition-colors font-medium px-2"
                       >
                         <RotateCcw className="w-3.5 h-3.5 mr-1" /> Retry
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSingle(job.id);
+                        }}
+                        className="inline-flex items-center text-red-400 hover:text-red-300 transition-colors font-medium px-2 ml-2"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
                       </button>
                     </td>
                   </tr>

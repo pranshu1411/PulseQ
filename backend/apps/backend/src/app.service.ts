@@ -53,6 +53,7 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
     try {
       const cutoff = new Date(Date.now() - this.STALE_JOB_TIMEOUT_MS);
 
+      // 1. Reconcile queued jobs that timed out
       const staleJobs = await this.prisma.job.findMany({
         where: {
           status: 'queued',
@@ -61,7 +62,6 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
       });
 
       for (const job of staleJobs) {
-        // 1. Mark failed in DB
         const failedReason = 'Job timed out waiting for a worker. No worker picked up this job within the allowed time.';
         await this.prisma.$transaction([
           this.prisma.job.update({
@@ -80,20 +80,62 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
           }),
         ]);
 
-        // 2. Remove from BullMQ so a worker doesn't process it later
         const queue = job.queue_name === IMAGE_NAME ? this.imageQueue : this.csvQueue;
         const bullJob = await queue.getJob(job.id);
         if (bullJob) {
           await bullJob.remove();
         }
 
-        // 3. Notify the frontend
         await this.eventsGateway.emitJobFailedToUser(job.id, job.queue_name, failedReason);
-
         this.logger.warn(`Marked stale job ${job.id} (${job.name}) as failed — queued since ${job.created_at.toISOString()}`);
       }
+
+      // 2. Reconcile active jobs that might have been interrupted during worker shutdown
+      const activeJobs = await this.prisma.job.findMany({
+        where: {
+          status: 'active',
+          updated_at: { lt: new Date(Date.now() - 60000) } // Hasn't been updated in 1 minute
+        },
+      });
+
+      for (const job of activeJobs) {
+        const queue = job.queue_name === IMAGE_NAME ? this.imageQueue : this.csvQueue;
+        const bullJob = await queue.getJob(job.id);
+        
+        if (!bullJob) {
+          // Job is missing from BullMQ. Since removeOnComplete/removeOnFail deleted it, 
+          // or it was lost, we mark it as failed to prevent it from being stuck forever.
+          await this.prisma.job.update({
+            where: { id: job.id },
+            data: { status: 'failed', error: { message: 'Job was lost or worker shut down unexpectedly without saving status' } },
+          });
+          this.logger.log(`Reconciled missing active job ${job.id} to failed`);
+          continue;
+        }
+
+        const state = await bullJob.getState();
+        if (state === 'completed') {
+          await this.prisma.job.update({
+            where: { id: job.id },
+            data: { status: 'completed', completed_at: new Date() },
+          });
+          this.logger.log(`Reconciled stuck active job ${job.id} to completed`);
+        } else if (state === 'failed') {
+          await this.prisma.job.update({
+            where: { id: job.id },
+            data: { status: 'failed' },
+          });
+          this.logger.log(`Reconciled stuck active job ${job.id} to failed`);
+        } else if (state === 'waiting' || state === 'delayed') {
+          await this.prisma.job.update({
+            where: { id: job.id },
+            data: { status: 'queued' },
+          });
+          this.logger.log(`Reconciled stuck active job ${job.id} back to queued`);
+        }
+      }
     } catch (error) {
-      this.logger.error('Failed to check for stale jobs:', error);
+      this.logger.error('Failed to check for stale/active jobs:', error);
     }
   }
 
@@ -138,8 +180,8 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
           type: 'exponential',
           delay: 2000,
         },
-        removeOnComplete: true,
-        removeOnFail: true,
+        removeOnComplete: { age: 3600, count: 1000 },
+        removeOnFail: { age: 3600, count: 1000 },
       });
 
       this.jobsAddedCounter.labels(IMAGE_NAME).inc();
@@ -202,8 +244,8 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
           type: 'exponential',
           delay: 2000,
         },
-        removeOnComplete: true,
-        removeOnFail: true,
+        removeOnComplete: { age: 3600, count: 1000 },
+        removeOnFail: { age: 3600, count: 1000 },
       });
 
       this.jobsAddedCounter.labels(CSV_NAME).inc();
@@ -387,6 +429,21 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
       data: { status: 'purged' }
     });
     return { message: `Successfully purged ${res.count} permanently failed jobs.` };
+  }
+
+  async deleteFailedJob(jobId: string, userId: string) {
+    const job = await this.prisma.job.findUnique({ where: { id: jobId } });
+    if (!job || job.userId !== userId) {
+      throw new NotFoundException(`Job with ID ${jobId} not found`);
+    }
+    if (job.status !== 'failed') {
+      throw new BadRequestException(`Only failed jobs can be deleted. Current status is ${job.status}`);
+    }
+    await this.prisma.job.update({
+      where: { id: jobId },
+      data: { status: 'purged' },
+    });
+    return { message: `Job ${jobId} successfully purged.` };
   }
 
   async downloadJobFile(jobId: string, type: 'thumbnail' | 'compressed', userId: string) {

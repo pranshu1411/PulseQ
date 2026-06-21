@@ -123,6 +123,11 @@ export class AppController {
     return this.appService.purgeAllFailedJobs(req.user.id);
   }
 
+  @Delete('dlq/:id')
+  async deleteFailedJob(@Param('id') jobId: string, @Req() req: AuthenticatedRequest) {
+    return this.appService.deleteFailedJob(jobId, req.user.id);
+  }
+
   @Post(':id/retry')
   async retryJob(@Param('id') jobId: string, @Req() req: AuthenticatedRequest) {
     return this.appService.retryJob(jobId, req.user.id);
