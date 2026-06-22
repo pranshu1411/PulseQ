@@ -11,6 +11,8 @@ import { BaseProcessor } from './base.processor';
 
 import sharp from 'sharp';
 import { Readable } from 'stream';
+import * as https from 'https';
+import * as http from 'http';
 
 @Processor(IMAGE_NAME, {
   concurrency: 5,
@@ -38,6 +40,25 @@ export class ImageProcessor extends BaseProcessor {
     });
   }
 
+  private fetchExternalUrl(url: string): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const client = url.startsWith('https') ? https : http;
+      client.get(url, (res) => {
+        if (res.statusCode && res.statusCode >= 400) {
+          return reject(new Error(`HTTP ${res.statusCode} fetching ${url}`));
+        }
+        // Follow redirects (301/302)
+        if (res.statusCode && (res.statusCode === 301 || res.statusCode === 302) && res.headers.location) {
+          return resolve(this.fetchExternalUrl(res.headers.location));
+        }
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+        res.on('end', () => resolve(Buffer.concat(chunks)));
+        res.on('error', reject);
+      }).on('error', reject);
+    });
+  }
+
   async process(job: Job<ImageProcessingPayload, any, string>): Promise<any> {
     if (!job.id) {
       throw new Error('Job ID is missing');
@@ -50,10 +71,16 @@ export class ImageProcessor extends BaseProcessor {
     const userId = dbJob.userId;
 
     const { imageUrl } = job.data;
-    this.logger.log(`Downloading image from MinIO: ${imageUrl}`);
 
-    const stream = await this.storageService.getFileStream(imageUrl);
-    const buffer = await this.streamToBuffer(stream);
+    let buffer: Buffer;
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      this.logger.log(`Fetching image from external URL: ${imageUrl}`);
+      buffer = await this.fetchExternalUrl(imageUrl);
+    } else {
+      this.logger.log(`Downloading image from MinIO: ${imageUrl}`);
+      const stream = await this.storageService.getFileStream(imageUrl);
+      buffer = await this.streamToBuffer(stream);
+    }
 
     const filename = `${job.id}.jpg`;
     const thumbnailPath = `thumbnails/${filename}`;

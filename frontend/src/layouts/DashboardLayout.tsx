@@ -28,6 +28,7 @@ export default function DashboardLayout() {
   const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [events, setEvents] = useState<JobEvent[]>([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
   const [stats, setStats] = useState({ active: 0, completed: 0, failed: 0, waiting: 0 });
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isAssignJobsOpen, setIsAssignJobsOpen] = useState(false);
@@ -53,7 +54,7 @@ export default function DashboardLayout() {
     document.title = `${getPageTitle(location.pathname)} | PulseQ`;
   }, [location.pathname]);
 
-  const fetchInitialJobs = async () => {
+  const fetchInitialJobs = async (retries = 3): Promise<void> => {
     try {
       const [statsRes, jobsRes] = await Promise.all([
         axios.get('http://localhost:4000/jobs/stats', {
@@ -95,8 +96,15 @@ export default function DashboardLayout() {
 
       setStats(statsRes.data);
       setEvents(initialEvents);
+      setIsLoadingEvents(false);
     } catch (err) {
-      console.error('Failed to fetch initial stats', err);
+      console.error(`Failed to fetch initial stats (retries left: ${retries - 1})`, err);
+      if (retries > 1) {
+        setTimeout(() => fetchInitialJobs(retries - 1), 1000);
+      } else {
+        // All retries exhausted — still clear the loading state
+        setIsLoadingEvents(false);
+      }
     }
   };
 
@@ -111,48 +119,64 @@ export default function DashboardLayout() {
     newSocket.on('connect', () => setIsConnected(true));
     newSocket.on('disconnect', () => setIsConnected(false));
 
-    const handleEvent = (type: JobEvent['type']) => async (data: Record<string, unknown>) => {
+    const handleEvent = (type: JobEvent['type']) => (data: Record<string, unknown>) => {
       const rawReason = data.failedReason;
       const failedReason = typeof rawReason === 'object' && rawReason !== null
         ? (rawReason as any).message || JSON.stringify(rawReason)
         : rawReason;
 
-      setEvents((prev) => {
-        const newEvent = { ...data, type, failedReason, timestamp: Date.now() } as JobEvent;
-        console.log(`[handleEvent] type=${type} jobId=${newEvent.jobId} data=${JSON.stringify(data)}`);
+      // Retry backoffs come as 'delayed' but should display as 'waiting'
+      const effectiveType: JobEvent['type'] =
+        type === 'delayed' && (data as any).isRetry ? 'waiting' : type;
 
+      setEvents((prev) => {
+        const newEvent = { ...data, type: effectiveType, failedReason, timestamp: Date.now() } as JobEvent;
         const existingIndex = prev.findIndex(e => e.jobId === newEvent.jobId);
-        
         if (existingIndex !== -1) {
           const updated = [...prev];
-          updated[existingIndex] = newEvent;
           updated.splice(existingIndex, 1);
           return [newEvent, ...updated].slice(0, 100);
         }
-
         return [newEvent, ...prev].slice(0, 100);
       });
 
-      if (type === 'completed') {
-        toast.success(`Job ${data.jobName || data.jobId} completed successfully`);
-      } else if (type === 'failed') {
-        toast.error(`Job ${data.jobName || data.jobId} failed`);
-      }
+      // Update stats locally — no DB fetch needed, avoids race condition.
+      setStats((prev) => {
+        const next = { ...prev };
+        const isRetry = (data as any).isRetry;
 
-      // Re-fetch stats directly from the backend to ensure perfect accuracy
-      // rather than trying to guess the counter increments/decrements.
-      try {
-        const statsRes = await axios.get('http://localhost:4000/jobs/stats', {
-          withCredentials: true,
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
+        if (effectiveType === 'active') {
+          if (!isRetry) {
+            // Fresh activation: job moved from waiting → active
+            next.waiting = Math.max(0, next.waiting - 1);
+            next.active = next.active + 1;
           }
-        });
-        setStats(statsRes.data);
-      } catch (e) {
-        console.error('Failed to update stats on event', e);
+          // Retry active: job was already counted as active, counters unchanged
+        } else if (effectiveType === 'completed') {
+          next.active = Math.max(0, next.active - 1);
+          next.completed = next.completed + 1;
+        } else if (effectiveType === 'failed') {
+          const isPermanent = (data as any).isPermanent;
+          if (isPermanent) {
+            next.active = Math.max(0, next.active - 1);
+            next.failed = next.failed + 1;
+          }
+          // Non-permanent failure: job will retry, counters stay as-is
+        } else if (effectiveType === 'waiting') {
+          if (!isRetry) {
+            // Genuinely new job entering the queue
+            next.waiting = next.waiting + 1;
+          }
+          // Retry wait: job is still in-flight, don't add to waiting
+        }
+        // 'delayed' (user-scheduled): counted as waiting on initial submit, skip
+        return next;
+      });
+
+      if (effectiveType === 'completed') {
+        toast.success(`Job ${data.jobName || data.jobId} completed successfully`);
+      } else if (effectiveType === 'failed' && (data as any).isPermanent) {
+        toast.error(`Job ${data.jobName || data.jobId} failed`);
       }
     };
 
@@ -393,6 +417,7 @@ export default function DashboardLayout() {
         <Outlet context={{
           events,
           stats,
+          isLoadingEvents,
           clearEvents: () => {
             setEvents([]);
             localStorage.setItem('pulseq_events_cleared_at', Date.now().toString());

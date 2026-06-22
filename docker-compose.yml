@@ -3,11 +3,11 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: job_queue_postgres
+    container_name: pulseq_postgres
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: job_queue
+      POSTGRES_USER: pulseq_admin
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: pulseq_db
     ports:
       - "5432:5432"
     volumes:
@@ -64,13 +64,7 @@ services:
     depends_on:
       - minio
     entrypoint: >
-      /bin/sh -c "
-      sleep 5;
-      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
-      /usr/bin/mc mb myminio/pulseq;
-      /usr/bin/mc anonymous set public myminio/pulseq;
-      exit 0;
-      "
+      /bin/sh -c " sleep 5; /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin; /usr/bin/mc mb myminio/pulseq; /usr/bin/mc anonymous set public myminio/pulseq; exit 0; "
 
 volumes:
   postgres_data:

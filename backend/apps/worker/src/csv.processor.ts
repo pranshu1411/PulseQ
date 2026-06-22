@@ -159,7 +159,8 @@ export class CsvProcessor extends BaseProcessor {
           errors: errors.slice(0, 50),
         };
 
-        // Guarantee DB is updated BEFORE process() returns to prevent shutdown race conditions
+        // Write status to DB before returning so the DB is consistent
+        // before BullMQ fires the QueueEvents 'completed' event.
         await this.prisma.$transaction([
           this.prisma.job.update({
             where: { id: job.id },

@@ -8,11 +8,12 @@ import { motion } from 'framer-motion';
 type DashboardContextType = {
   events: JobEvent[];
   stats: { active: number; completed: number; failed: number; waiting: number };
+  isLoadingEvents: boolean;
   clearEvents: () => void;
 };
 
 export default function Dashboard() {
-  const { events, stats, clearEvents } = useOutletContext<DashboardContextType>();
+  const { events, stats, isLoadingEvents, clearEvents } = useOutletContext<DashboardContextType>();
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
@@ -51,7 +52,16 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="divide-y divide-neutral-800/50 max-h-[600px] overflow-y-auto p-2">
-          {events.length === 0 ? (
+          {isLoadingEvents ? (
+            <div className="flex flex-col items-center justify-center py-16 text-neutral-600">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-bounce [animation-delay:-0.3s]" />
+                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-bounce [animation-delay:-0.15s]" />
+                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-bounce" />
+              </div>
+              <p className="mt-3 text-sm">Loading events...</p>
+            </div>
+          ) : events.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-neutral-500">
               <Activity className="w-12 h-12 mb-4 opacity-20" />
               <p>Waiting for queue events...</p>
@@ -132,6 +142,7 @@ export default function Dashboard() {
               </div>
             ))
           )}
+
         </div>
 
         {/* Pagination Controls */}

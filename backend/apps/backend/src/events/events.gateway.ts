@@ -89,20 +89,44 @@ export class EventsGateway
   }
 
   private setupListeners(queueEvents: QueueEvents, queueName: string) {
-    queueEvents.on('active', ({ jobId, prev }) => {
-      this.emitToUser(jobId, 'jobActive', { queueName, jobId, prev });
+    queueEvents.on('active', async ({ jobId, prev }) => {
+      // Detect retries: if the job has prior attempts, it's a retry cycle.
+      // We don't need to wait here — the initial active has attempts=0 in DB,
+      // retry actives have attempts>0 (set by BaseProcessor.onFailed).
+      const dbJob = await this.prisma.job
+        .findUnique({ where: { id: jobId }, select: { attempts: true } })
+        .catch(() => null);
+      const isRetry = dbJob != null && dbJob.attempts > 0;
+      this.emitToUser(jobId, 'jobActive', { queueName, jobId, prev, isRetry });
     });
 
-    queueEvents.on('delayed', ({ jobId, delay }) => {
-      this.emitToUser(jobId, 'jobDelayed', { queueName, jobId, delay });
+    queueEvents.on('delayed', async ({ jobId, delay }) => {
+      // Wait for BaseProcessor.onFailed to write to DB first.
+      await new Promise((r) => setTimeout(r, 150));
+      const dbJob = await this.prisma.job
+        .findUnique({ where: { id: jobId }, select: { attempts: true, status: true } })
+        .catch(() => null);
+      const isRetry = dbJob != null && dbJob.attempts > 0;
+      const isUserScheduled = dbJob?.status === 'delayed';
+      // Suppress spurious BullMQ 'delayed' events fired for non-delayed, non-retry jobs
+      // (BullMQ occasionally fires this for priority queue jobs on initial add).
+      if (!isUserScheduled && !isRetry) return;
+      this.emitToUser(jobId, 'jobDelayed', { queueName, jobId, delay, isRetry });
     });
 
     queueEvents.on('completed', ({ jobId, returnvalue }) => {
       this.emitToUser(jobId, 'jobCompleted', { queueName, jobId, returnvalue });
     });
 
-    queueEvents.on('failed', ({ jobId, failedReason }) => {
-      this.emitToUser(jobId, 'jobFailed', { queueName, jobId, failedReason });
+    queueEvents.on('failed', async ({ jobId, failedReason }) => {
+      // Wait briefly for BaseProcessor.onFailed to write the status to DB.
+      await new Promise((r) => setTimeout(r, 150));
+      const dbJob = await this.prisma.job
+        .findUnique({ where: { id: jobId }, select: { status: true } })
+        .catch(() => null);
+      // If status is 'failed' it's a permanent failure. If 'delayed', BullMQ is retrying.
+      const isPermanent = !dbJob || dbJob.status === 'failed';
+      this.emitToUser(jobId, 'jobFailed', { queueName, jobId, failedReason, isPermanent });
     });
 
     queueEvents.on('progress', ({ jobId, data }) => {
@@ -110,18 +134,27 @@ export class EventsGateway
     });
 
     queueEvents.on('waiting', async ({ jobId }) => {
-      try {
-        await this.prisma.job.update({
-          where: { id: jobId },
-          data: { status: 'queued' },
-        });
-      } catch (e) {
-        this.logger.error(
-          `Failed to update status to queued for waiting job ${jobId}`,
-          e,
-        );
+      // Detect if this 'waiting' is a retry re-queue or a fresh job entering the queue.
+      const dbJob = await this.prisma.job
+        .findUnique({ where: { id: jobId }, select: { attempts: true } })
+        .catch(() => null);
+      const isRetry = dbJob != null && dbJob.attempts > 0;
+
+      if (!isRetry) {
+        // Only update status to 'queued' for non-retry waits
+        try {
+          await this.prisma.job.update({
+            where: { id: jobId },
+            data: { status: 'queued' },
+          });
+        } catch (e) {
+          this.logger.error(
+            `Failed to update status to queued for waiting job ${jobId}`,
+            e,
+          );
+        }
       }
-      this.emitToUser(jobId, 'jobWaiting', { queueName, jobId });
+      this.emitToUser(jobId, 'jobWaiting', { queueName, jobId, isRetry });
     });
   }
 
