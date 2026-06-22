@@ -4,6 +4,7 @@ import { Activity, Menu, LayoutDashboard, Image as ImageIcon, FileText, LogOut, 
 import { NavLink, Link, Outlet, useLocation } from 'react-router-dom';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { API_BASE, WS_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -57,7 +58,7 @@ export default function DashboardLayout() {
   const fetchInitialJobs = async (retries = 3): Promise<void> => {
     try {
       const [statsRes, jobsRes] = await Promise.all([
-        axios.get('http://localhost:4000/jobs/stats', {
+        axios.get(`${API_BASE}/jobs/stats`, {
           withCredentials: true,
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -65,7 +66,7 @@ export default function DashboardLayout() {
             'Expires': '0'
           }
         }),
-        axios.get('http://localhost:4000/jobs?limit=50', { withCredentials: true })
+        axios.get(`${API_BASE}/jobs?limit=50`, { withCredentials: true })
       ]);
 
       const clearedAtStr = localStorage.getItem('pulseq_events_cleared_at');
@@ -78,6 +79,7 @@ export default function DashboardLayout() {
           if (job.status === 'active') type = 'active';
           if (job.status === 'completed') type = 'completed';
           if (job.status === 'failed') type = 'failed';
+          if (job.status === 'delayed') type = 'delayed';
 
           const rawError = job.error;
           const failedReason = typeof rawError === 'object' && rawError !== null
@@ -111,7 +113,7 @@ export default function DashboardLayout() {
   useEffect(() => {
     fetchInitialJobs();
 
-    const newSocket = io('http://localhost:4000', {
+    const newSocket = io(WS_URL, {
       transports: ['websocket'],
       withCredentials: true,
     });
@@ -196,7 +198,7 @@ export default function DashboardLayout() {
 
   const handleLogout = async () => {
     try {
-      await axios.get('http://localhost:4000/auth/logout', { withCredentials: true });
+      await axios.get(`${API_BASE}/auth/logout`, { withCredentials: true });
       toast.success('Logged out successfully');
       await checkAuth(); // Will set user to null and trigger redirect
     } catch (error) {

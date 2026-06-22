@@ -3,6 +3,7 @@ import { Image as ImageIcon, Link as LinkIcon, UploadCloud, X, Plus } from 'luci
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import { API_BASE } from '../config';
 
 export default function SubmitImageJob() {
   const [jobName, setJobName] = useState('');
@@ -78,7 +79,7 @@ export default function SubmitImageJob() {
         const formData = new FormData();
         imageFiles.forEach(f => formData.append('files', f));
         
-        const uploadRes = await axios.post('http://localhost:4000/jobs/upload/image', formData, {
+        const uploadRes = await axios.post(`${API_BASE}/jobs/upload/image`, formData, {
           withCredentials: true,
           headers: { 'Content-Type': 'multipart/form-data' },
         });
@@ -88,13 +89,13 @@ export default function SubmitImageJob() {
       }
 
       await Promise.all(finalUrls.map(url => 
-        axios.post('http://localhost:4000/jobs/image', {
+        axios.post(`${API_BASE}/jobs/image`, {
           jobName: jobName || undefined,
           imageUrl: url,
           operations: ['resize', 'compress'],
           metadata: { source: 'dashboard', inputType, isBatch: finalUrls.length > 1 },
           priority: priority,
-          scheduledFor: scheduledFor || undefined
+          scheduledFor: scheduledFor ? new Date(scheduledFor).toISOString() : undefined
         }, { withCredentials: true })
       ));
       

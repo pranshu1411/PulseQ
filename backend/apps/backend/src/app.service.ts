@@ -87,7 +87,7 @@ export class AppService implements OnModuleInit, OnModuleDestroy {
       const staleJobs = await this.prisma.job.findMany({
         where: {
           status: 'queued',
-          created_at: { lt: cutoff },
+          updated_at: { lt: cutoff },
         },
       });
 

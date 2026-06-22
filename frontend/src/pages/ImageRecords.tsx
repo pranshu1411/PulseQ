@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Image as ImageIcon, ChevronLeft, ChevronRight, Loader2, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { API_BASE } from '../config';
 
 type ImageRecord = {
   id: string;
@@ -35,7 +36,7 @@ export default function ImageRecords() {
     const fetchImages = async () => {
       setLoading(true);
       try {
-        const res = await axios.get(`http://localhost:4000/images`, {
+        const res = await axios.get(`${API_BASE}/images`, {
           params: { page, limit: 10 },
           withCredentials: true,
         });
@@ -131,7 +132,7 @@ export default function ImageRecords() {
                         {img.job?.id ? (
                           <>
                             <a
-                              href={`http://localhost:4000/jobs/${img.job.id}/download/thumbnail`}
+                              href={`${API_BASE}/jobs/${img.job.id}/download/thumbnail`}
                               target="_blank"
                               rel="noreferrer"
                               className="inline-flex items-center px-2 py-1 text-xs font-medium text-neutral-300 bg-neutral-800 hover:bg-neutral-700 rounded transition-colors"
@@ -139,7 +140,7 @@ export default function ImageRecords() {
                               Thumbnail
                             </a>
                             <a
-                              href={`http://localhost:4000/jobs/${img.job.id}/download/compressed`}
+                              href={`${API_BASE}/jobs/${img.job.id}/download/compressed`}
                               target="_blank"
                               rel="noreferrer"
                               className="inline-flex items-center px-2 py-1 text-xs font-medium text-neutral-300 bg-neutral-800 hover:bg-neutral-700 rounded transition-colors"

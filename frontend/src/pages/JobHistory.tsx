@@ -1,8 +1,9 @@
-import { useEffect, useState, Fragment } from 'react';
+﻿import { useEffect, useState, Fragment } from 'react';
 import axios from 'axios';
 import { History, Activity, CheckCircle2, XCircle, Clock, Loader2, Download, ChevronLeft, ChevronRight, RotateCcw, Trash2 } from 'lucide-react';
 import JobHistoryModal from '../components/JobHistoryModal';
 import { motion } from 'framer-motion';
+import { API_BASE } from '../config';
 
 type Job = {
   id: string;
@@ -33,7 +34,7 @@ export default function JobHistory() {
     const fetchJobs = async () => {
       setLoading(true);
       try {
-        const { data } = await axios.get(`http://localhost:4000/jobs`, { 
+        const { data } = await axios.get(`${API_BASE}/jobs`, { 
           params: { page, limit: 10 },
           withCredentials: true 
         });
@@ -52,9 +53,9 @@ export default function JobHistory() {
   const handleRetry = async (jobId: string) => {
     setRetryingId(jobId);
     try {
-      await axios.post(`http://localhost:4000/jobs/${jobId}/retry`, {}, { withCredentials: true });
+      await axios.post(`${API_BASE}/jobs/${jobId}/retry`, {}, { withCredentials: true });
       // Refresh the list
-      const { data } = await axios.get(`http://localhost:4000/jobs`, {
+      const { data } = await axios.get(`${API_BASE}/jobs`, {
         params: { page, limit: 10 },
         withCredentials: true,
       });
@@ -199,7 +200,7 @@ export default function JobHistory() {
                             {job.queue_name === 'image-processing' && job.status === 'completed' && (
                               <>
                                 <a 
-                                  href={`http://localhost:4000/jobs/${job.id}/download/thumbnail`}
+                                  href={`${API_BASE}/jobs/${job.id}/download/thumbnail`}
                                   target="_blank"
                                   rel="noreferrer"
                                   onClick={(e) => e.stopPropagation()}
@@ -208,7 +209,7 @@ export default function JobHistory() {
                                   <Download className="w-3 h-3 mr-1" /> Thumb
                                 </a>
                                 <a 
-                                  href={`http://localhost:4000/jobs/${job.id}/download/compressed`}
+                                  href={`${API_BASE}/jobs/${job.id}/download/compressed`}
                                   target="_blank"
                                   rel="noreferrer"
                                   onClick={(e) => e.stopPropagation()}
@@ -264,7 +265,7 @@ export default function JobHistory() {
           onClose={() => setSelectedJobId(null)}
           onRetry={async () => {
             try {
-              const { data } = await axios.get(`http://localhost:4000/jobs`, {
+              const { data } = await axios.get(`${API_BASE}/jobs`, {
                 params: { page, limit: 10 },
                 withCredentials: true,
               });

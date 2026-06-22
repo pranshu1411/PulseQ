@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { X, Loader2, Clock, CheckCircle2, XCircle, RefreshCw, Activity, RotateCcw } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE } from '../config';
 
 type JobLog = {
   id: string;
@@ -33,7 +34,7 @@ export default function JobHistoryModal({ jobId, onClose, onRetry }: JobHistoryM
   useEffect(() => {
     const fetchJob = async () => {
       try {
-        const { data } = await axios.get(`http://localhost:4000/jobs/${jobId}`, {
+        const { data } = await axios.get(`${API_BASE}/jobs/${jobId}`, {
           withCredentials: true,
         });
         setJob(data);
@@ -50,9 +51,9 @@ export default function JobHistoryModal({ jobId, onClose, onRetry }: JobHistoryM
   const handleRetry = async () => {
     setRetrying(true);
     try {
-      await axios.post(`http://localhost:4000/jobs/${jobId}/retry`, {}, { withCredentials: true });
+      await axios.post(`${API_BASE}/jobs/${jobId}/retry`, {}, { withCredentials: true });
       // Re-fetch the job to show updated status and new log entry
-      const { data } = await axios.get(`http://localhost:4000/jobs/${jobId}`, { withCredentials: true });
+      const { data } = await axios.get(`${API_BASE}/jobs/${jobId}`, { withCredentials: true });
       setJob(data);
       onRetry?.();
     } catch (err) {

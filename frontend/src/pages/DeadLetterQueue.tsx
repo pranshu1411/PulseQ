@@ -6,6 +6,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { useOutletContext } from 'react-router-dom';
 import JobHistoryModal from '../components/JobHistoryModal';
 import { motion } from 'framer-motion';
+import { API_BASE } from '../config';
 
 type Job = {
   id: string;
@@ -31,7 +32,7 @@ export default function DeadLetterQueue() {
   const fetchDLQ = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:4000/jobs?limit=100&status=failed', {
+      const res = await axios.get(`${API_BASE}/jobs?limit=100&status=failed`, {
         withCredentials: true,
       });
       setJobs(res.data.data || []);
@@ -51,7 +52,7 @@ export default function DeadLetterQueue() {
     try {
       setReplayingAll(true);
       setConfirmAction(null);
-      const res = await axios.post('http://localhost:4000/jobs/dlq/replay-all', {}, { withCredentials: true });
+      const res = await axios.post(`${API_BASE}/jobs/dlq/replay-all`, {}, { withCredentials: true });
       toast.success(res.data.message || 'Jobs requeued successfully');
       fetchDLQ();
       refreshEvents();
@@ -67,7 +68,7 @@ export default function DeadLetterQueue() {
     try {
       setPurgingAll(true);
       setConfirmAction(null);
-      const res = await axios.delete('http://localhost:4000/jobs/dlq/purge-all', { withCredentials: true });
+      const res = await axios.delete(`${API_BASE}/jobs/dlq/purge-all`, { withCredentials: true });
       toast.success(res.data.message || 'Jobs purged successfully');
       fetchDLQ();
       refreshEvents();
@@ -81,7 +82,7 @@ export default function DeadLetterQueue() {
 
   const handleRetrySingle = async (jobId: string) => {
     try {
-      await axios.post(`http://localhost:4000/jobs/${jobId}/retry`, {}, { withCredentials: true });
+      await axios.post(`${API_BASE}/jobs/${jobId}/retry`, {}, { withCredentials: true });
       toast.success('Job requeued');
       fetchDLQ();
       refreshEvents();
@@ -92,7 +93,7 @@ export default function DeadLetterQueue() {
 
   const handleDeleteSingle = async (jobId: string) => {
     try {
-      await axios.delete(`http://localhost:4000/jobs/dlq/${jobId}`, { withCredentials: true });
+      await axios.delete(`${API_BASE}/jobs/dlq/${jobId}`, { withCredentials: true });
       toast.success('Job deleted');
       fetchDLQ();
       refreshEvents();

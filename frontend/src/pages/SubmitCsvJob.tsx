@@ -3,6 +3,7 @@ import { FileText, Link as LinkIcon, UploadCloud, X, Plus } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import { API_BASE } from '../config';
 
 export default function SubmitCsvJob() {
   const [jobName, setJobName] = useState('');
@@ -77,7 +78,7 @@ export default function SubmitCsvJob() {
         const formData = new FormData();
         csvFiles.forEach(f => formData.append('files', f));
         
-        const uploadRes = await axios.post('http://localhost:4000/jobs/upload/csv', formData, {
+        const uploadRes = await axios.post(`${API_BASE}/jobs/upload/csv`, formData, {
           withCredentials: true,
           headers: { 'Content-Type': 'multipart/form-data' },
         });
@@ -87,12 +88,12 @@ export default function SubmitCsvJob() {
       }
 
       await Promise.all(finalUrls.map(url => 
-        axios.post('http://localhost:4000/jobs/csv', {
+        axios.post(`${API_BASE}/jobs/csv`, {
           jobName: jobName || undefined,
           fileUrl: url,
           batchSize: 10,
           priority: priority,
-          scheduledFor: scheduledFor || undefined
+          scheduledFor: scheduledFor ? new Date(scheduledFor).toISOString() : undefined
         }, { withCredentials: true })
       ));
       

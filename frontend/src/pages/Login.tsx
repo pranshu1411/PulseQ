@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { API_BASE } from '../config';
 
 export default function Login() {
   useEffect(() => {
@@ -11,7 +12,7 @@ export default function Login() {
 
   const handleGoogleLogin = () => {
     toast.loading('Redirecting to Google...');
-    window.location.href = 'http://localhost:4000/auth/google';
+    window.location.href = `${API_BASE}/auth/google`;
   };
 
   return (

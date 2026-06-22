@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Activity, CheckCircle2, Clock, XCircle, Download, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import type { JobEvent } from '../layouts/DashboardLayout';
 import JobHistoryModal from '../components/JobHistoryModal';
 import { motion } from 'framer-motion';
+import { API_BASE } from '../config';
 
 type DashboardContextType = {
   events: JobEvent[];
@@ -119,7 +120,7 @@ export default function Dashboard() {
                   {ev.queueName === 'image-processing' && ev.type === 'completed' && (
                     <div className="mt-3 flex items-center gap-3">
                       <a
-                        href={`http://localhost:4000/jobs/${ev.jobId}/download/thumbnail`}
+                        href={`${API_BASE}/jobs/${ev.jobId}/download/thumbnail`}
                         target="_blank"
                         rel="noreferrer"
                         onClick={(e) => e.stopPropagation()}
@@ -128,7 +129,7 @@ export default function Dashboard() {
                         <Download className="w-3.5 h-3.5 mr-1.5" /> Thumbnail
                       </a>
                       <a
-                        href={`http://localhost:4000/jobs/${ev.jobId}/download/compressed`}
+                        href={`${API_BASE}/jobs/${ev.jobId}/download/compressed`}
                         target="_blank"
                         rel="noreferrer"
                         onClick={(e) => e.stopPropagation()}

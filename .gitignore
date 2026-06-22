@@ -27,6 +27,9 @@ build/
 .env
 .env.test
 .env.local
+.env.*
+*.tar.gz
+*.zip
 
 # OS generated files
 .DS_Store

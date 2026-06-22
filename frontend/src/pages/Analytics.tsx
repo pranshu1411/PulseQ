@@ -3,6 +3,7 @@ import { Activity, Server, AlertTriangle, RefreshCw, BarChart2, HeartPulse, Cloc
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import axios from 'axios';
 import { motion } from 'framer-motion';
+import { API_BASE } from '../config';
 
 type WorkerNode = {
   id: string;
@@ -52,12 +53,12 @@ export default function Analytics() {
       };
 
       const [wRes, tRes, lRes, fRes, rRes, wmRes] = await Promise.all([
-        axios.get('http://localhost:4000/jobs/analytics/workers', { withCredentials: true, headers }),
-        axios.get('http://localhost:4000/jobs/analytics/throughput', { withCredentials: true, headers }),
-        axios.get('http://localhost:4000/jobs/analytics/latency', { withCredentials: true, headers }),
-        axios.get('http://localhost:4000/jobs/analytics/failures', { withCredentials: true, headers }),
-        axios.get('http://localhost:4000/jobs/analytics/retries', { withCredentials: true, headers }),
-        axios.get('http://localhost:4000/jobs/analytics/worker-metrics', { withCredentials: true, headers }),
+        axios.get(`${API_BASE}/jobs/analytics/workers`, { withCredentials: true, headers }),
+        axios.get(`${API_BASE}/jobs/analytics/throughput`, { withCredentials: true, headers }),
+        axios.get(`${API_BASE}/jobs/analytics/latency`, { withCredentials: true, headers }),
+        axios.get(`${API_BASE}/jobs/analytics/failures`, { withCredentials: true, headers }),
+        axios.get(`${API_BASE}/jobs/analytics/retries`, { withCredentials: true, headers }),
+        axios.get(`${API_BASE}/jobs/analytics/worker-metrics`, { withCredentials: true, headers }),
       ]);
 
       setWorkers(wRes.data);
@@ -279,7 +280,7 @@ export default function Analytics() {
                   labelFormatter={(v) => formatTime(v)}
                   contentStyle={{ backgroundColor: '#171717', borderColor: '#262626', borderRadius: '8px', color: '#e5e5e5' }}
                   itemStyle={{ color: '#e5e5e5' }}
-                  formatter={(value: number) => [`${value}%`, 'CPU Usage']}
+                  formatter={(value: any) => [`${value}%`, 'CPU Usage']}
                 />
                 <Legend verticalAlign="top" height={36} iconSize={10} wrapperStyle={{ fontSize: '12px', paddingBottom: '10px' }} />
                 {recentWorkers.map((w, i) => {
@@ -322,7 +323,7 @@ export default function Analytics() {
                   labelFormatter={(v) => formatTime(v)}
                   contentStyle={{ backgroundColor: '#171717', borderColor: '#262626', borderRadius: '8px', color: '#e5e5e5' }}
                   itemStyle={{ color: '#e5e5e5' }}
-                  formatter={(value: number) => [`${value} MB`, 'Memory']}
+                  formatter={(value: any) => [`${value} MB`, 'Memory']}
                 />
                 <Legend verticalAlign="top" height={36} iconSize={10} wrapperStyle={{ fontSize: '12px', paddingBottom: '10px' }} />
                 {recentWorkers.map((w, i) => {

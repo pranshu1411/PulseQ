@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import axios from 'axios';
+import { API_BASE } from '../config';
 
 type User = {
   id: string;
@@ -24,7 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkAuth = async () => {
     try {
       setIsLoading(true);
-      const res = await axios.get('http://localhost:4000/auth/me', {
+      const res = await axios.get(`${API_BASE}/auth/me`, {
         withCredentials: true,
       });
       setUser(res.data);

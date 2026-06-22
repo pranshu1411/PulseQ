@@ -4,6 +4,7 @@ import { Mail, Camera, Trash2, Save, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import { API_BASE } from '../config';
 
 export default function UserProfile() {
   const { user, checkAuth } = useAuth();
@@ -39,7 +40,7 @@ export default function UserProfile() {
         formData.append('avatar', avatarFile);
       }
 
-      await axios.patch('http://localhost:4000/auth/profile', formData, {
+      await axios.patch(`${API_BASE}/auth/profile`, formData, {
         withCredentials: true,
         headers: { 'Content-Type': 'multipart/form-data' },
       });
@@ -57,7 +58,7 @@ export default function UserProfile() {
   const handleDelete = async () => {
     try {
       setIsDeleting(true);
-      await axios.delete('http://localhost:4000/auth/profile', { withCredentials: true });
+      await axios.delete(`${API_BASE}/auth/profile`, { withCredentials: true });
       toast.success('Account deleted');
       await checkAuth(); // This will log the user out
     } catch (err) {

@@ -39,13 +39,14 @@ export class AuthController {
 
     res.cookie('Authentication', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.NODE_ENV === 'production' && process.env.FRONTEND_URL?.startsWith('https'),
       sameSite: 'lax',
       maxAge: 1000 * 60 * 60 * 24, // 1 day
     });
 
     // Redirect back to frontend dashboard
-    res.redirect('http://localhost:5173/dashboard');
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    res.redirect(`${frontendUrl}/dashboard`);
   }
 
   @Get('me')
@@ -91,7 +92,9 @@ export class AuthController {
         filename,
         file.mimetype,
       );
-      data.avatarUrl = `http://localhost:9000/pulseq/${filename}`;
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:9000';
+      const storagePrefix = process.env.FRONTEND_URL ? '/storage' : '';
+      data.avatarUrl = `${frontendUrl}${storagePrefix}/pulseq/${filename}`;
     }
 
     return this.authService.updateUser(req.user.id, data);
