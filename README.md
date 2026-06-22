@@ -36,8 +36,10 @@ flowchart TD
     classDef storage fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
     classDef queue fill:#ef4444,stroke:#b91c1c,stroke-width:2px,color:#fff
     classDef metrics fill:#ec4899,stroke:#be185d,stroke-width:2px,color:#fff
+    classDef proxy fill:#475569,stroke:#334155,stroke-width:2px,color:#fff
     
     UI["React UI (Vite + TS + Framer Motion)"]:::frontend
+    Nginx["Nginx Reverse Proxy"]:::proxy
     Gateway["API Gateway (NestJS)"]:::backend
     SocketIO["WebSocket Server (Socket.IO)"]:::backend
     
@@ -50,8 +52,10 @@ flowchart TD
     Prometheus["Prometheus"]:::metrics
     Grafana["Grafana"]:::metrics
     
-    UI -- "REST Requests" --> Gateway
-    UI <== "Live Job Updates" ==> SocketIO
+    UI -- "HTTP/WS Requests" --> Nginx
+    Nginx -- "REST Requests" --> Gateway
+    Nginx <== "Live Job Updates" ==> SocketIO
+    Nginx -- "File Requests" --> MinIO
     
     Gateway -- "Produces Jobs" --> Queue
     Queue -- "Consumes Jobs" --> Worker
@@ -60,7 +64,7 @@ flowchart TD
     Gateway -- "Reads/Writes State" --> DB
     
     Worker -- "Reads/Writes Files" --> MinIO
-    Gateway -- "Uploads/Reads Files" --> MinIO
+    Gateway -- "Uploads Files" --> MinIO
     
     Queue -. "BullMQ QueueEvents" .-> SocketIO
     
@@ -111,6 +115,7 @@ flowchart TD
 | Layer | Technology |
 |---|---|
 | **Frontend** | React 19, TypeScript, Vite, Tailwind CSS 4, Recharts, Socket.IO Client |
+| **Reverse Proxy** | Nginx |
 | **Backend API** | NestJS, Prisma ORM, Passport (Google OAuth), BullMQ |
 | **Worker Service** | NestJS, Sharp (image processing), csv-parser |
 | **Queue Broker** | Redis 7 + BullMQ |
@@ -195,6 +200,56 @@ npm run dev
 ```
 
 Visit [http://localhost:5173](http://localhost:5173) to see the landing page. Sign in with Google to access the dashboard.
+
+## Production Deployment
+
+For deploying to a production server (e.g., an Ubuntu droplet), use the production Docker Compose file which runs the backend, worker, frontend (via Nginx reverse proxy), and all infrastructure dependencies inside containers.
+
+### 1. Set up production environment variables
+Create `.env.production` in the root folder:
+
+```env
+NODE_ENV=production
+FRONTEND_URL="http://your-server-ip.nip.io"
+POSTGRES_USER=pulseq_admin
+POSTGRES_PASSWORD=your_secure_password
+POSTGRES_DB=pulseq_db
+PG_DATABASE_URL="postgresql://pulseq_admin:your_secure_password@postgres:5432/pulseq_db?schema=public"
+
+MINIO_ROOT_USER=pulseq_admin
+MINIO_ROOT_PASSWORD=your_secure_password
+MINIO_ENDPOINT=http://minio:9000
+MINIO_ACCESS_KEY=pulseq_admin
+MINIO_SECRET_KEY=your_secure_password
+
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+GOOGLE_CLIENT_ID="your_google_client_id"
+GOOGLE_CLIENT_SECRET="your_google_client_secret"
+GOOGLE_CALLBACK_URL="http://your-server-ip.nip.io/api/auth/google/callback"
+JWT_SECRET="your_jwt_secret"
+```
+
+### 2. Build and run production containers
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+This command will:
+- Build the `pulseq-backend` and `pulseq-worker` images (NestJS)
+- Build the `pulseq-nginx` image (React frontend built with Vite and served by Nginx)
+- Start all dependencies (Postgres, Redis, MinIO, Prometheus, Grafana)
+- Map Nginx to port `80` (accessible via `http://your-server-ip.nip.io`)
+
+### 3. Run Database Migrations
+
+Once the backend is up, apply the Prisma migrations:
+
+```bash
+docker compose -f docker-compose.prod.yml exec backend npx prisma migrate deploy
+```
 
 ## Project Structure
 
