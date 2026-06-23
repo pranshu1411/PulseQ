@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Activity, ArrowRight, Server, Zap, Database, Clock, Layers, ShieldCheck } from 'lucide-react';
+import { Activity, ArrowRight, Server, Zap, Database, Clock, Layers, ShieldCheck, Laptop, Cpu } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
@@ -242,6 +242,86 @@ export default function Landing() {
               Protect your infrastructure. A highly-indexed concurrent tenant limiter prevents any single user from monopolizing worker nodes and starving the rest of the system.
             </p>
           </motion.div>
+        </div>
+
+        {/* How It Works Architecture Section */}
+        <div className="max-w-6xl mx-auto mt-40 mb-20 relative">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6">How It Works Under the Hood</h2>
+            <p className="text-xl text-neutral-400 max-w-2xl mx-auto">
+              A robust, decoupled architecture designed for infinite horizontal scaling and zero dropped jobs.
+            </p>
+          </div>
+
+          {/* Pipeline Visualization */}
+          <div className="relative">
+            {/* Connecting Line (Desktop) */}
+            <div className="hidden md:block absolute top-1/2 left-[10%] right-[10%] h-1 bg-gradient-to-r from-indigo-500/0 via-indigo-500/50 to-indigo-500/0 -translate-y-1/2 rounded-full" />
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative z-10">
+              
+              {/* Step 1 */}
+              <motion.div 
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="bg-neutral-900/80 backdrop-blur-sm border border-neutral-800 p-8 rounded-2xl flex flex-col items-center text-center relative shadow-xl shadow-indigo-500/5 group hover:-translate-y-2 transition-transform duration-300"
+              >
+                <div className="w-20 h-20 bg-neutral-950 border border-neutral-800 rounded-full flex items-center justify-center mb-6 group-hover:border-indigo-500/50 group-hover:shadow-[0_0_30px_-5px_rgba(99,102,241,0.3)] transition-all">
+                  <Laptop className="w-8 h-8 text-indigo-400" />
+                </div>
+                <h4 className="text-xl font-bold text-white mb-3">1. Job Submission</h4>
+                <p className="text-sm text-neutral-400 leading-relaxed">The React UI sends a REST payload (CSV or Image) to the highly-available NestJS API Gateway.</p>
+              </motion.div>
+
+              {/* Step 2 */}
+              <motion.div 
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="bg-neutral-900/80 backdrop-blur-sm border border-neutral-800 p-8 rounded-2xl flex flex-col items-center text-center relative shadow-xl shadow-purple-500/5 group hover:-translate-y-2 transition-transform duration-300"
+              >
+                <div className="w-20 h-20 bg-neutral-950 border border-neutral-800 rounded-full flex items-center justify-center mb-6 group-hover:border-purple-500/50 group-hover:shadow-[0_0_30px_-5px_rgba(168,85,247,0.3)] transition-all">
+                  <Database className="w-8 h-8 text-purple-400" />
+                </div>
+                <h4 className="text-xl font-bold text-white mb-3">2. Queue Broker</h4>
+                <p className="text-sm text-neutral-400 leading-relaxed">The Gateway serializes the job into Redis. BullMQ manages priorities, delays, and state instantly.</p>
+              </motion.div>
+
+              {/* Step 3 */}
+              <motion.div 
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                className="bg-neutral-900/80 backdrop-blur-sm border border-neutral-800 p-8 rounded-2xl flex flex-col items-center text-center relative shadow-xl shadow-emerald-500/5 group hover:-translate-y-2 transition-transform duration-300"
+              >
+                <div className="w-20 h-20 bg-neutral-950 border border-neutral-800 rounded-full flex items-center justify-center mb-6 group-hover:border-emerald-500/50 group-hover:shadow-[0_0_30px_-5px_rgba(16,185,129,0.3)] transition-all">
+                  <Cpu className="w-8 h-8 text-emerald-400" />
+                </div>
+                <h4 className="text-xl font-bold text-white mb-3">3. Worker Nodes</h4>
+                <p className="text-sm text-neutral-400 leading-relaxed">Distributed worker nodes pull jobs from Redis concurrently, executing heavy processing tasks in parallel.</p>
+              </motion.div>
+
+              {/* Step 4 */}
+              <motion.div 
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                className="bg-neutral-900/80 backdrop-blur-sm border border-neutral-800 p-8 rounded-2xl flex flex-col items-center text-center relative shadow-xl shadow-blue-500/5 group hover:-translate-y-2 transition-transform duration-300"
+              >
+                <div className="w-20 h-20 bg-neutral-950 border border-neutral-800 rounded-full flex items-center justify-center mb-6 group-hover:border-blue-500/50 group-hover:shadow-[0_0_30px_-5px_rgba(59,130,246,0.3)] transition-all">
+                  <Activity className="w-8 h-8 text-blue-400" />
+                </div>
+                <h4 className="text-xl font-bold text-white mb-3">4. Live Telemetry</h4>
+                <p className="text-sm text-neutral-400 leading-relaxed">Results hit Postgres/MinIO. Workers emit live WebSocket events back to your dashboard instantly.</p>
+              </motion.div>
+
+            </div>
+          </div>
         </div>
       </main>
 
