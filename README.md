@@ -201,55 +201,7 @@ npm run dev
 
 Visit [http://localhost:5173](http://localhost:5173) to see the landing page. Sign in with Google to access the dashboard.
 
-## Production Deployment
 
-For deploying to a production server (e.g., an Ubuntu droplet), use the production Docker Compose file which runs the backend, worker, frontend (via Nginx reverse proxy), and all infrastructure dependencies inside containers.
-
-### 1. Set up production environment variables
-Create `.env.production` in the root folder:
-
-```env
-NODE_ENV=production
-FRONTEND_URL="http://your-server-ip.nip.io"
-POSTGRES_USER=pulseq_admin
-POSTGRES_PASSWORD=your_secure_password
-POSTGRES_DB=pulseq_db
-PG_DATABASE_URL="postgresql://pulseq_admin:your_secure_password@postgres:5432/pulseq_db?schema=public"
-
-MINIO_ROOT_USER=pulseq_admin
-MINIO_ROOT_PASSWORD=your_secure_password
-MINIO_ENDPOINT=http://minio:9000
-MINIO_ACCESS_KEY=pulseq_admin
-MINIO_SECRET_KEY=your_secure_password
-
-REDIS_HOST=redis
-REDIS_PORT=6379
-
-GOOGLE_CLIENT_ID="your_google_client_id"
-GOOGLE_CLIENT_SECRET="your_google_client_secret"
-GOOGLE_CALLBACK_URL="http://your-server-ip.nip.io/api/auth/google/callback"
-JWT_SECRET="your_jwt_secret"
-```
-
-### 2. Build and run production containers
-
-```bash
-docker compose -f docker-compose.prod.yml up -d --build
-```
-
-This command will:
-- Build the `pulseq-backend` and `pulseq-worker` images (NestJS)
-- Build the `pulseq-nginx` image (React frontend built with Vite and served by Nginx)
-- Start all dependencies (Postgres, Redis, MinIO, Prometheus, Grafana)
-- Map Nginx to port `80` (accessible via `http://your-server-ip.nip.io`)
-
-### 3. Run Database Migrations
-
-Once the backend is up, apply the Prisma migrations:
-
-```bash
-docker compose -f docker-compose.prod.yml exec backend npx prisma migrate deploy
-```
 
 ## Project Structure
 
